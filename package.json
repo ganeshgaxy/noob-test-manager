@@ -1,10 +1,10 @@
 {
   "name": "@ganeshgaxy/noob-test-manager",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "A dev tool for SDETs to manage and test web applications",
   "type": "module",
   "bin": {
-    "noob-sdet": "./dist/cli.js"
+    "noob-sdet": "dist/cli.js"
   },
   "main": "./dist/server/index.js",
   "files": [
