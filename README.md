@@ -9,13 +9,13 @@ A lightweight, self-hosted test case management tool for SDETs. Run it as a CLI,
 ## Install
 
 ```bash
-npm install -g noob-sdet
+npm install -g @ganeshgaxy/noob-test-manager
 ```
 
 Or run without installing:
 
 ```bash
-npx noob-sdet start
+npx @ganeshgaxy/noob-test-manager start
 ```
 
 Then open `http://localhost:3000`. To use a different port:
