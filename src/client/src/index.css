@@ -1,0 +1,223 @@
+@import 'tailwindcss';
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-blue: #0070f3;
+  --color-green: #22c55e;
+  --color-red: #ef4444;
+  --color-yellow: #eab308;
+  --color-purple: #a855f7;
+  --color-orange: #f97316;
+}
+
+/* ── Theme CSS variables (set by ThemeProvider at runtime) ─────────────────── */
+:root {
+  --t-bg-base: #000000;
+  --t-bg-surface: #0d0d0d;
+  --t-bg-panel: #111111;
+  --t-bg-elevated: #141414;
+  --t-bg-hover: #161616;
+  --t-sidebar-hover: rgba(255, 255, 255, 0.05);
+  --t-sidebar-active: rgba(255, 255, 255, 0.09);
+  --t-border-subtle: #1a1a1a;
+  --t-border-default: #222222;
+  --t-border-strong: #333333;
+  --t-text-primary: #ededed;
+  --t-text-secondary: #888888;
+  --t-text-muted: #555555;
+  --t-accent-danger: #e5484d;
+  --t-accent-success: #1a9e5e;
+  --t-accent-warning: #b45309;
+  --t-accent-blocked: #f97316;
+  /* Row-level overlays — overridden by ThemeProvider for light themes */
+  --t-row-hover: rgba(255, 255, 255, 0.025);
+  --t-row-selected: rgba(255, 255, 255, 0.04);
+  --t-elem-hover: rgba(255, 255, 255, 0.07);
+  /* Shadows */
+  --t-shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --t-shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.8);
+  /* Dialog/modal overlay */
+  --t-overlay: rgba(0, 0, 0, 0.6);
+  --t-font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  --t-font-mono: ui-monospace, SFMono-Regular, 'Cascadia Code', monospace;
+  --t-radius: 8px;
+
+  /* Tailwind / Radix tokens — mirrored from theme variables */
+  --background: var(--t-bg-base);
+  --foreground: var(--t-text-primary);
+  --card: var(--t-bg-surface);
+  --card-foreground: var(--t-text-primary);
+  --popover: var(--t-bg-panel);
+  --popover-foreground: var(--t-text-primary);
+  --primary: #0070f3;
+  --primary-foreground: #ffffff;
+  --secondary: var(--t-bg-surface);
+  --secondary-foreground: var(--t-text-secondary);
+  --muted: var(--t-bg-panel);
+  --muted-foreground: var(--t-text-secondary);
+  --accent: var(--t-bg-surface);
+  --accent-foreground: var(--t-text-primary);
+  --destructive: var(--t-accent-danger);
+  --border: var(--t-border-strong);
+  --input: var(--t-bg-surface);
+  --ring: #0070f3;
+  --radius: 0.375rem;
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background: var(--t-bg-base);
+  color: var(--t-text-primary);
+  font-family: var(--t-font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--t-border-strong);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--t-text-muted);
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+}
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ── Rich-text preview (dangerouslySetInnerHTML from TipTap HTML) ── */
+.rich-preview p {
+  margin: 0 0 5px;
+}
+.rich-preview p:last-child {
+  margin-bottom: 0;
+}
+.rich-preview h1 {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 8px 0 5px;
+}
+.rich-preview h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 6px 0 4px;
+}
+.rich-preview h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 5px 0 3px;
+}
+.rich-preview ul,
+.rich-preview ol {
+  padding-left: 20px;
+  margin: 3px 0;
+}
+.rich-preview li {
+  margin: 2px 0;
+}
+.rich-preview ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 2px;
+}
+.rich-preview ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 3px 0;
+}
+.rich-preview ul[data-type='taskList'] li > div {
+  flex: 1;
+}
+.rich-preview code {
+  font-family: 'Menlo', 'Monaco', monospace;
+  font-size: 11px;
+  background: var(--t-bg-surface);
+  border: 1px solid var(--t-border-subtle);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.rich-preview pre {
+  background: var(--t-bg-surface);
+  border: 1px solid var(--t-border-subtle);
+  border-radius: 6px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  margin: 5px 0;
+  font-size: 11px;
+  font-family: 'Menlo', 'Monaco', monospace;
+}
+.rich-preview pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+.rich-preview blockquote {
+  border-left: 3px solid var(--t-border-default);
+  margin: 5px 0;
+  padding-left: 12px;
+  color: var(--t-text-secondary);
+}
+.rich-preview hr {
+  border: none;
+  border-top: 1px solid var(--t-border-subtle);
+  margin: 8px 0;
+}
+.rich-preview strong {
+  font-weight: 600;
+}
+.rich-preview em {
+  font-style: italic;
+}
+.rich-preview u {
+  text-decoration: underline;
+}
+.rich-preview s {
+  text-decoration: line-through;
+}

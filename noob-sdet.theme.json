@@ -1,0 +1,20 @@
+{
+  "name": "Light",
+  "bgBase": "#f6f6f7",
+  "bgSurface": "#ffffff",
+  "bgPanel": "#f9f9fa",
+  "bgElevated": "#ffffff",
+  "borderSubtle": "#ebebec",
+  "borderDefault": "#e2e2e4",
+  "borderStrong": "#c4c4c8",
+  "textPrimary": "#111113",
+  "textSecondary": "#696970",
+  "textMuted": "#a8a8b3",
+  "accentDanger": "#dc2626",
+  "accentSuccess": "#16a34a",
+  "accentWarning": "#d97706",
+  "fontSans": "-apple-system, BlinkMacSystemFont, \"Inter\", \"Segoe UI\", sans-serif",
+  "fontMono": "ui-monospace, SFMono-Regular, \"Cascadia Code\", monospace",
+  "radius": 8,
+  "bgHover": "#f0f0f1"
+}

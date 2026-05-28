@@ -1,0 +1,7 @@
+{
+  "cache": {
+    "type": "lru",
+    "lruMax": 500,
+    "ttl": 30
+  }
+}
