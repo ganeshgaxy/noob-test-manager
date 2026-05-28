@@ -19,6 +19,7 @@ import {
   Square,
   CheckSquare,
   UploadSimple,
+  MagnifyingGlass,
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button.js'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog.js'
@@ -280,7 +281,7 @@ function DetailPanel({
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         {loading ? (
           <div
             style={{
@@ -311,6 +312,42 @@ function DetailPanel({
           <>
             {/* Accordion 1 — Steps / Scenarios (open by default) */}
             <Accordion title={detail.type === 'bdd' ? 'Scenarios' : 'Steps'} defaultOpen>
+              {/* Preconditions — shown at the top of the steps accordion */}
+              {detail.preconditions && (
+                <div
+                  style={{
+                    marginBottom: 14,
+                    padding: '8px 12px',
+                    background: 'var(--t-bg-panel)',
+                    border: '1px solid var(--t-border-subtle)',
+                    borderRadius: 6,
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: 11,
+                      color: 'var(--t-text-muted)',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      marginBottom: 5,
+                    }}
+                  >
+                    Preconditions
+                  </p>
+                  <div
+                    className="rich-preview"
+                    dangerouslySetInnerHTML={{ __html: detail.preconditions }}
+                    style={{
+                      fontSize: 12,
+                      color: 'var(--t-text-secondary)',
+                      lineHeight: 1.6,
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
+                    }}
+                  />
+                </div>
+              )}
               {detail.type === 'traditional' ? (
                 detail.steps && detail.steps.length > 0 ? (
                   <ol
@@ -353,6 +390,8 @@ function DetailPanel({
                               fontSize: 13,
                               color: 'var(--t-text-primary)',
                               lineHeight: 1.6,
+                              wordBreak: 'break-word',
+                              overflowWrap: 'break-word',
                             }}
                           />
                           {s.expectedResult && (
@@ -366,6 +405,8 @@ function DetailPanel({
                                 paddingTop: 5,
                                 borderTop: '1px dashed var(--t-border-subtle)',
                                 lineHeight: 1.6,
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
                               }}
                             />
                           )}
@@ -469,11 +510,29 @@ function DetailPanel({
             {/* Accordion 2 — Details */}
             <Accordion title="Details">
               <div style={{ paddingTop: 4 }}>
+                {detail.internalId && (
+                  <PropRow label="ID">
+                    <span
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        color: 'var(--t-text-secondary)',
+                      }}
+                    >
+                      {detail.internalId}
+                    </span>
+                  </PropRow>
+                )}
                 <PropRow label="Type">
                   <span style={{ textTransform: 'capitalize', color: 'var(--t-text-secondary)' }}>
                     {detail.type}
                   </span>
                 </PropRow>
+                {detail.category && (
+                  <PropRow label="Category">
+                    <span style={{ color: 'var(--t-text-secondary)' }}>{detail.category}</span>
+                  </PropRow>
+                )}
                 <PropRow label="Priority">
                   <span
                     style={{
@@ -494,8 +553,40 @@ function DetailPanel({
                     {detail.status}
                   </span>
                 </PropRow>
+                {detail.automationStatus && (
+                  <PropRow label="Automation">
+                    <span style={{ color: 'var(--t-text-secondary)' }}>
+                      {detail.automationStatus}
+                    </span>
+                  </PropRow>
+                )}
+                {detail.estimatedTime != null && detail.estimatedTime > 0 && (
+                  <PropRow label="Estimate">
+                    <span style={{ color: 'var(--t-text-secondary)' }}>
+                      {detail.estimatedTime >= 60
+                        ? `${Math.floor(detail.estimatedTime / 60)}h${detail.estimatedTime % 60 > 0 ? ` ${detail.estimatedTime % 60}m` : ''}`
+                        : `${detail.estimatedTime}m`}
+                    </span>
+                  </PropRow>
+                )}
+                {detail.jiraIssueKey && (
+                  <PropRow label="Jira">
+                    <span
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        color: 'var(--t-text-secondary)',
+                      }}
+                    >
+                      {detail.jiraIssueKey}
+                    </span>
+                  </PropRow>
+                )}
                 {detail.assigneeId && <PropRow label="Assignee">{detail.assigneeId}</PropRow>}
                 {detail.createdBy && <PropRow label="Created by">{detail.createdBy}</PropRow>}
+                {detail.updatedBy && detail.updatedBy !== detail.createdBy && (
+                  <PropRow label="Updated by">{detail.updatedBy}</PropRow>
+                )}
 
                 {detail.description && (
                   <div style={{ marginTop: 16 }}>
@@ -514,28 +605,13 @@ function DetailPanel({
                     <div
                       className="rich-preview"
                       dangerouslySetInnerHTML={{ __html: detail.description }}
-                      style={{ fontSize: 13, color: 'var(--t-text-secondary)', lineHeight: 1.7 }}
-                    />
-                  </div>
-                )}
-                {detail.preconditions && (
-                  <div style={{ marginTop: 14 }}>
-                    <p
                       style={{
-                        fontSize: 11,
-                        color: 'var(--t-text-muted)',
-                        fontWeight: 600,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.06em',
-                        marginBottom: 6,
+                        fontSize: 13,
+                        color: 'var(--t-text-secondary)',
+                        lineHeight: 1.7,
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
                       }}
-                    >
-                      Preconditions
-                    </p>
-                    <div
-                      className="rich-preview"
-                      dangerouslySetInnerHTML={{ __html: detail.preconditions }}
-                      style={{ fontSize: 13, color: 'var(--t-text-secondary)', lineHeight: 1.7 }}
                     />
                   </div>
                 )}
@@ -556,7 +632,13 @@ function DetailPanel({
                     <div
                       className="rich-preview"
                       dangerouslySetInnerHTML={{ __html: detail.notes }}
-                      style={{ fontSize: 13, color: 'var(--t-text-secondary)', lineHeight: 1.7 }}
+                      style={{
+                        fontSize: 13,
+                        color: 'var(--t-text-secondary)',
+                        lineHeight: 1.7,
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                      }}
                     />
                   </div>
                 )}
@@ -918,7 +1000,13 @@ export function SpaceView({
   const [newMenuOpen, setNewMenuOpen] = useState(false)
   const [newMenuPos, setNewMenuPos] = useState<{ top: number; right: number } | null>(null)
   const newBtnRef = useRef<HTMLButtonElement>(null)
+  const [testSearch, setTestSearch] = useState('')
   const newMenuRef = useRef<HTMLDivElement>(null)
+
+  // Clear search when folder changes
+  useEffect(() => {
+    setTestSearch('')
+  }, [activeFolderId])
 
   useEffect(() => {
     if (!importMenuOpen) return
@@ -1412,7 +1500,9 @@ export function SpaceView({
               fontWeight: 500,
             }}
           >
-            {tests.length}
+            {testSearch.trim()
+              ? `${tests.filter((t) => t.title.toLowerCase().includes(testSearch.toLowerCase()) || (t.internalId ?? '').toLowerCase().includes(testSearch.toLowerCase())).length} / ${tests.length}`
+              : tests.length}
           </span>
           {tests.length > 0 && (
             <button
@@ -1439,6 +1529,54 @@ export function SpaceView({
             </button>
           )}
         </div>
+        {/* Search input */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            flex: 1,
+            maxWidth: 260,
+            margin: '0 16px',
+            padding: '5px 10px',
+            borderRadius: 7,
+            background: 'var(--t-bg-surface)',
+            border: '1px solid var(--t-border-subtle)',
+          }}
+        >
+          <MagnifyingGlass size={13} style={{ color: 'var(--t-text-muted)', flexShrink: 0 }} />
+          <input
+            value={testSearch}
+            onChange={(e) => setTestSearch(e.target.value)}
+            placeholder="Search tests…"
+            style={{
+              flex: 1,
+              background: 'none',
+              border: 'none',
+              outline: 'none',
+              fontSize: 12,
+              color: 'var(--t-text-primary)',
+              minWidth: 0,
+            }}
+          />
+          {testSearch && (
+            <button
+              onClick={() => setTestSearch('')}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                color: 'var(--t-text-muted)',
+                display: 'flex',
+                lineHeight: 1,
+              }}
+            >
+              <X size={11} />
+            </button>
+          )}
+        </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {onImportFromCsv && (
             <Button size="sm" variant="outline" onClick={onImportFromCsv} style={{ gap: 6 }}>
@@ -1802,179 +1940,244 @@ export function SpaceView({
               </Button>
             </div>
           ) : (
-            tests.map((t, i) => {
-              const isSelected = t.id === selectedTestId
-              const isChecked = selectedTestIds.has(t.id)
-              return (
-                <div
-                  key={t.id}
-                  onClick={() => onSelectTest(isSelected ? null : t.id)}
-                  className="test-row"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '13px 24px',
-                    cursor: 'pointer',
-                    borderTop: i > 0 ? '1px solid var(--t-border-subtle)' : 'none',
-                    transition: 'background 0.1s',
-                    background:
-                      isChecked || isSelected || hoveredTestId === t.id
-                        ? 'var(--t-bg-hover)'
-                        : 'transparent',
-                    borderLeft: isChecked
-                      ? '2px solid var(--t-border-strong)'
-                      : isSelected
-                        ? '2px solid var(--t-border-default)'
-                        : '2px solid transparent',
-                  }}
-                  onMouseEnter={(e) => {
-                    setHoveredTestId(t.id)
-                    const btns = (e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>(
-                      '.row-action-btn'
-                    )
-                    btns.forEach((b) => (b.style.opacity = '1'))
-                    const cb = (e.currentTarget as HTMLElement).querySelector<HTMLElement>(
-                      '.row-checkbox'
-                    )
-                    if (cb) cb.style.opacity = '1'
-                  }}
-                  onMouseLeave={(e) => {
-                    setHoveredTestId(null)
-                    const btns = (e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>(
-                      '.row-action-btn'
-                    )
-                    btns.forEach((b) => (b.style.opacity = '0'))
-                    const cb = (e.currentTarget as HTMLElement).querySelector<HTMLElement>(
-                      '.row-checkbox'
-                    )
-                    if (cb && !isChecked) cb.style.opacity = '0'
-                  }}
-                >
-                  {/* Checkbox */}
-                  <button
-                    className="row-checkbox"
-                    onClick={(e) => toggleSelect(t.id, e)}
-                    title={isChecked ? 'Deselect' : 'Select'}
+            (() => {
+              const q = testSearch.trim().toLowerCase()
+              const filteredTests = q
+                ? tests.filter(
+                    (t) =>
+                      t.title.toLowerCase().includes(q) ||
+                      (t.internalId ?? '').toLowerCase().includes(q)
+                  )
+                : tests
+              if (q && filteredTests.length === 0)
+                return (
+                  <div
                     style={{
-                      width: 20,
-                      height: 20,
-                      borderRadius: 4,
-                      border: 'none',
-                      background: 'transparent',
-                      color: isChecked ? 'var(--t-text-primary)' : 'var(--t-text-muted)',
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      flexShrink: 0,
+                      gap: 10,
+                      height: '100%',
+                      color: 'var(--t-text-muted)',
+                      fontSize: 13,
+                    }}
+                  >
+                    <MagnifyingGlass size={28} weight="duotone" />
+                    <span>
+                      No tests match{' '}
+                      <strong style={{ color: 'var(--t-text-secondary)' }}>
+                        &ldquo;{testSearch}&rdquo;
+                      </strong>
+                    </span>
+                  </div>
+                )
+              return filteredTests.map((t, i) => {
+                const isSelected = t.id === selectedTestId
+                const isChecked = selectedTestIds.has(t.id)
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => onSelectTest(isSelected ? null : t.id)}
+                    className="test-row"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '13px 24px',
                       cursor: 'pointer',
-                      opacity: isChecked ? 1 : 0,
-                      transition: 'opacity 0.1s',
+                      borderTop: i > 0 ? '1px solid var(--t-border-subtle)' : 'none',
+                      transition: 'background 0.1s',
+                      background:
+                        isChecked || isSelected || hoveredTestId === t.id
+                          ? 'var(--t-bg-hover)'
+                          : 'transparent',
+                      borderLeft: isChecked
+                        ? '2px solid var(--t-border-strong)'
+                        : isSelected
+                          ? '2px solid var(--t-border-default)'
+                          : '2px solid transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      setHoveredTestId(t.id)
+                      const btns = (e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>(
+                        '.row-action-btn'
+                      )
+                      btns.forEach((b) => (b.style.opacity = '1'))
+                      const cb = (e.currentTarget as HTMLElement).querySelector<HTMLElement>(
+                        '.row-checkbox'
+                      )
+                      if (cb) cb.style.opacity = '1'
+                    }}
+                    onMouseLeave={(e) => {
+                      setHoveredTestId(null)
+                      const btns = (e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>(
+                        '.row-action-btn'
+                      )
+                      btns.forEach((b) => (b.style.opacity = '0'))
+                      const cb = (e.currentTarget as HTMLElement).querySelector<HTMLElement>(
+                        '.row-checkbox'
+                      )
+                      if (cb && !isChecked) cb.style.opacity = '0'
                     }}
                   >
-                    {isChecked ? <CheckSquare size={14} /> : <Square size={14} />}
-                  </button>
-
-                  <span
-                    title={t.type === 'bdd' ? 'BDD' : 'Traditional'}
-                    style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: 6,
-                      flexShrink: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: 'var(--t-bg-surface)',
-                      border: '1px solid var(--t-border-subtle)',
-                    }}
-                  >
-                    {t.type === 'bdd' ? (
-                      <GitBranch size={13} color="var(--t-text-muted)" />
-                    ) : (
-                      <ListChecks size={13} color="var(--t-text-muted)" />
-                    )}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p
+                    {/* Checkbox */}
+                    <button
+                      className="row-checkbox"
+                      onClick={(e) => toggleSelect(t.id, e)}
+                      title={isChecked ? 'Deselect' : 'Select'}
                       style={{
-                        fontSize: 13,
-                        fontWeight: 500,
-                        color: 'var(--t-text-primary)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        width: 20,
+                        height: 20,
+                        borderRadius: 4,
+                        border: 'none',
+                        background: 'transparent',
+                        color: isChecked ? 'var(--t-text-primary)' : 'var(--t-text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        cursor: 'pointer',
+                        opacity: isChecked ? 1 : 0,
+                        transition: 'opacity 0.1s',
                       }}
                     >
-                      {t.title}
-                    </p>
-                    <div style={{ display: 'flex', gap: 6, marginTop: 3 }}>
-                      <span
+                      {isChecked ? <CheckSquare size={14} /> : <Square size={14} />}
+                    </button>
+
+                    <span
+                      title={t.type === 'bdd' ? 'BDD' : 'Traditional'}
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 6,
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'var(--t-bg-surface)',
+                        border: '1px solid var(--t-border-subtle)',
+                      }}
+                    >
+                      {t.type === 'bdd' ? (
+                        <GitBranch size={13} color="var(--t-text-muted)" />
+                      ) : (
+                        <ListChecks size={13} color="var(--t-text-muted)" />
+                      )}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p
                         style={{
-                          fontSize: 9,
-                          fontWeight: 600,
-                          letterSpacing: '0.06em',
-                          textTransform: 'uppercase',
-                          color: 'var(--t-text-muted)',
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: 'var(--t-text-primary)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}
                       >
-                        {t.status}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 9,
-                          fontWeight: 600,
-                          letterSpacing: '0.06em',
-                          textTransform: 'uppercase',
-                          color: PRIORITY_COLOR[t.priority] ?? 'var(--t-text-muted)',
-                        }}
-                      >
-                        {t.priority}
-                      </span>
+                        {t.title}
+                      </p>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 3, alignItems: 'center' }}>
+                        {t.internalId && (
+                          <span
+                            style={{
+                              fontSize: 9,
+                              fontWeight: 600,
+                              letterSpacing: '0.06em',
+                              textTransform: 'uppercase',
+                              color: 'var(--t-text-muted)',
+                            }}
+                          >
+                            {t.internalId}
+                          </span>
+                        )}
+                        {t.internalId && (
+                          <span style={{ fontSize: 9, color: 'var(--t-border-default)' }}>·</span>
+                        )}
+                        <span
+                          style={{
+                            fontSize: 9,
+                            fontWeight: 600,
+                            letterSpacing: '0.06em',
+                            textTransform: 'uppercase',
+                            color: 'var(--t-text-muted)',
+                          }}
+                        >
+                          {t.status}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 9,
+                            fontWeight: 600,
+                            letterSpacing: '0.06em',
+                            textTransform: 'uppercase',
+                            color: PRIORITY_COLOR[t.priority] ?? 'var(--t-text-muted)',
+                          }}
+                        >
+                          {t.priority}
+                        </span>
+                        {t.category && (
+                          <>
+                            <span style={{ fontSize: 9, color: 'var(--t-border-default)' }}>·</span>
+                            <span
+                              style={{
+                                fontSize: 9,
+                                fontWeight: 600,
+                                letterSpacing: '0.06em',
+                                textTransform: 'uppercase',
+                                color: 'var(--t-text-muted)',
+                              }}
+                            >
+                              {t.category}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
+                    <RowMenu
+                      items={[
+                        {
+                          label: 'Edit',
+                          icon: <PencilSimple size={13} />,
+                          action: () =>
+                            onNavigate({
+                              type: 'test-editor',
+                              appId,
+                              spaceId: activeSpaceId,
+                              folderId: activeFolderId,
+                              testId: t.id,
+                            }),
+                        },
+                        {
+                          label: 'Copy',
+                          icon: <CopySimple size={13} />,
+                          action: () => handleSingleCopy(t.id),
+                          separator: true,
+                        },
+                        {
+                          label: 'Cut',
+                          icon: <Scissors size={13} />,
+                          action: () => handleSingleCut(t.id),
+                        },
+                        {
+                          label: 'Duplicate',
+                          icon: <CopySimple size={13} weight="fill" />,
+                          action: () => handleSingleDuplicate(t.id),
+                        },
+                        {
+                          label: 'Delete',
+                          icon: <Trash size={13} />,
+                          action: () => setConfirm({ id: t.id, name: t.title }),
+                          destructive: true,
+                          separator: true,
+                        },
+                      ]}
+                    />
                   </div>
-                  <RowMenu
-                    items={[
-                      {
-                        label: 'Edit',
-                        icon: <PencilSimple size={13} />,
-                        action: () =>
-                          onNavigate({
-                            type: 'test-editor',
-                            appId,
-                            spaceId: activeSpaceId,
-                            folderId: activeFolderId,
-                            testId: t.id,
-                          }),
-                      },
-                      {
-                        label: 'Copy',
-                        icon: <CopySimple size={13} />,
-                        action: () => handleSingleCopy(t.id),
-                        separator: true,
-                      },
-                      {
-                        label: 'Cut',
-                        icon: <Scissors size={13} />,
-                        action: () => handleSingleCut(t.id),
-                      },
-                      {
-                        label: 'Duplicate',
-                        icon: <CopySimple size={13} weight="fill" />,
-                        action: () => handleSingleDuplicate(t.id),
-                      },
-                      {
-                        label: 'Delete',
-                        icon: <Trash size={13} />,
-                        action: () => setConfirm({ id: t.id, name: t.title }),
-                        destructive: true,
-                        separator: true,
-                      },
-                    ]}
-                  />
-                </div>
-              )
-            })
+                )
+              })
+            })()
           )}
         </div>
 

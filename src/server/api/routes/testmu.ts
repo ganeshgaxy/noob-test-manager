@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db } from '../../db/client.js'
 import {
   tests,
@@ -8,8 +8,7 @@ import {
   bddSteps,
   folders,
   spaces,
-  tags,
-  testTags,
+  globalTags,
 } from '../../db/schema.js'
 import { cache } from '../../cache/client.js'
 import { requireAuth } from '../middleware/auth.js'
@@ -293,24 +292,14 @@ async function dbCreateFolder(
   return f.id
 }
 
-async function dbUpsertTag(appId: number, name: string): Promise<number> {
-  const inserted = await db
-    .insert(tags)
-    .values({ appId, name })
-    .onConflictDoNothing()
-    .returning({ id: tags.id })
-  if (inserted.length > 0) return inserted[0].id
-  const [existing] = await db
-    .select({ id: tags.id })
-    .from(tags)
-    .where(and(eq(tags.appId, appId), eq(tags.name, name)))
-    .limit(1)
-  return existing.id
+/** Upsert a tag name into global_tags. Returns the global tag id. */
+async function dbUpsertGlobalTag(name: string): Promise<void> {
+  await db.insert(globalTags).values({ name }).onConflictDoNothing()
 }
 
 async function dbCreateTest(
   folderId: number,
-  appId: number,
+  _appId: number,
   payload: {
     type: 'traditional' | 'bdd'
     title: string
@@ -325,6 +314,7 @@ async function dbCreateTest(
     tagNames?: string[]
   }
 ): Promise<number> {
+  const tagNames = payload.tagNames ?? []
   const [created] = await db
     .insert(tests)
     .values({
@@ -340,6 +330,7 @@ async function dbCreateTest(
         (payload.automationStatus as (typeof tests.$inferInsert)['automationStatus']) ?? null,
       category: (payload.category as (typeof tests.$inferInsert)['category']) ?? null,
       jiraIssueKey: payload.jiraIssueKey ?? null,
+      tags: tagNames.length > 0 ? JSON.stringify(tagNames) : null,
       createdBy: 'testmu-import',
       updatedBy: 'testmu-import',
     })
@@ -348,13 +339,9 @@ async function dbCreateTest(
   const internalId = `TC${created.id + 100000}`
   await db.update(tests).set({ internalId }).where(eq(tests.id, created.id))
 
-  const tagNames = payload.tagNames ?? []
+  // Upsert each tag name into global_tags — idempotent, existing ones are skipped
   if (tagNames.length > 0) {
-    const tagIds = await Promise.all(tagNames.map((n) => dbUpsertTag(appId, n)))
-    await db
-      .insert(testTags)
-      .values(tagIds.map((tagId) => ({ testId: created.id, tagId })))
-      .onConflictDoNothing()
+    await Promise.all(tagNames.map((n) => dbUpsertGlobalTag(n)))
   }
 
   return created.id
@@ -567,7 +554,7 @@ async function importAllProjects(
           status: STATUS_MAP[tc.status?.toLowerCase() ?? ''] ?? 'Draft',
           estimatedTime: tc.estimated_time,
           automationStatus: tc.automation_status,
-          category: TYPE_MAP[tc.type?.toLowerCase() ?? ''] ?? undefined,
+          category: TYPE_MAP[tc.type?.toLowerCase() ?? ''] ?? 'Manual',
           jiraIssueKey: tc.jira_details?.[0]?.jira_id ?? undefined,
           tagNames,
         })

@@ -154,6 +154,7 @@ export type TestType =
   | 'Performance'
   | 'Integration'
   | 'Functional'
+  | 'Manual'
   | 'Regression'
   | 'Smoke & Sanity'
   | 'Security'
@@ -329,6 +330,10 @@ export interface RunResult {
   testTitle: string
   testType: 'traditional' | 'bdd'
   preconditions: string | null
+  internalId: string | null
+  priority: string
+  tags: string | null // JSON array string
+  category: string | null
   folderId: number | null
   folderName: string
   folderPath: string[]
@@ -482,3 +487,20 @@ export type View =
   | { type: 'trash'; appId: number; spaceId: number }
   | { type: 'users'; section?: 'users' | 'user-groups' }
   | { type: 'admin-settings' }
+
+// ─── Tags ─────────────────────────────────────────────────────────────────────
+
+export interface GlobalTag {
+  id: number
+  name: string
+  color: string | null
+  createdAt: string
+}
+
+export interface SpaceTag {
+  id: number
+  spaceId: number
+  name: string
+  color: string | null
+  createdAt: string
+}

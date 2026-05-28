@@ -31,6 +31,8 @@ import type {
   AppGroupAccess,
   SpaceGroupAccess,
   AppTheme,
+  GlobalTag,
+  SpaceTag,
 } from '../types/index.js'
 
 const BASE = '/api'
@@ -192,6 +194,17 @@ export const api = {
           req<BddStep>(
             `${BASE}/folders/${folderId}/tests/${testId}/scenarios/${scenarioId}/steps`,
             { method: 'POST', body: JSON.stringify(data) }
+          ),
+        update: (
+          folderId: number,
+          testId: number,
+          scenarioId: number,
+          stepId: number,
+          data: { type?: string; text?: string; order?: number }
+        ) =>
+          req<BddStep>(
+            `${BASE}/folders/${folderId}/tests/${testId}/scenarios/${scenarioId}/steps/${stepId}`,
+            { method: 'PUT', body: JSON.stringify(data) }
           ),
         delete: (folderId: number, testId: number, scenarioId: number, stepId: number) =>
           req<{ success: boolean }>(
@@ -647,6 +660,41 @@ export const api = {
     update: (data: Partial<AppTheme>) =>
       req<AppTheme>(`${BASE}/theme`, { method: 'PUT', body: JSON.stringify(data) }),
     reset: () => req<AppTheme>(`${BASE}/theme/reset`, { method: 'POST', body: '{}' }),
+  },
+
+  // ─── Global tags ──────────────────────────────────────────────────────────
+
+  globalTags: {
+    list: () => req<GlobalTag[]>(`${BASE}/global-tags`),
+    create: (data: { name: string; color?: string }) =>
+      req<GlobalTag>(`${BASE}/global-tags`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (tagId: number, data: { name?: string; color?: string }) =>
+      req<GlobalTag>(`${BASE}/global-tags/${tagId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    delete: (tagId: number) =>
+      req<{ success: boolean }>(`${BASE}/global-tags/${tagId}`, { method: 'DELETE' }),
+  },
+
+  // ─── Space tags ───────────────────────────────────────────────────────────
+
+  spaceTags: {
+    list: (spaceId: number) => req<SpaceTag[]>(`${BASE}/spaces/${spaceId}/space-tags`),
+    create: (spaceId: number, data: { name: string; color?: string }) =>
+      req<SpaceTag>(`${BASE}/spaces/${spaceId}/space-tags`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (spaceId: number, tagId: number, data: { name?: string; color?: string }) =>
+      req<SpaceTag>(`${BASE}/spaces/${spaceId}/space-tags/${tagId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    delete: (spaceId: number, tagId: number) =>
+      req<{ success: boolean }>(`${BASE}/spaces/${spaceId}/space-tags/${tagId}`, {
+        method: 'DELETE',
+      }),
   },
 
   // ─── Database config ──────────────────────────────────────────────────────

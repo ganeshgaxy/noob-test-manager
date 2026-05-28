@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Hand,
@@ -22,6 +22,11 @@ import {
   CheckCircle,
   XCircle,
   Minus,
+  WarningCircle,
+  ArrowCircleRight,
+  Prohibit,
+  Funnel,
+  ArrowsDownUp,
 } from '@phosphor-icons/react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Button } from '@/components/ui/button.js'
@@ -72,13 +77,6 @@ const STATUS_TEXT: Record<string, string> = {
   skip: '#f59e0b',
   blocked: '#f97316',
 }
-const STATUS_LABEL: Record<string, string> = {
-  pending: '○',
-  pass: '✓',
-  fail: '✗',
-  blocked: '⊘',
-  skip: '—',
-}
 const RUN_STATUS_BADGE: Record<string, string> = {
   pending: 'bg-secondary text-muted-foreground border-border',
   running: 'bg-secondary text-yellow border-border',
@@ -128,6 +126,269 @@ const STATUS_TOOLTIP: Record<string, string> = {
   fail: 'Fail',
   skip: 'Skip',
   blocked: 'Block',
+}
+
+const PRIORITY_COLOR: Record<string, string> = {
+  low: '#6b7280',
+  medium: '#d97706',
+  high: '#ea580c',
+  critical: '#dc2626',
+}
+
+// ─── Filter dropdown ─────────────────────────────────────────────────────────
+
+function FilterDropdown({
+  label,
+  options,
+  selected,
+  onChange,
+}: {
+  label: string
+  options: string[]
+  selected: Set<string>
+  onChange: (next: Set<string>) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        btnRef.current &&
+        !btnRef.current.contains(e.target as Node)
+      )
+        setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const toggleOpen = () => {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setMenuPos({ top: r.bottom + 4, left: r.left })
+    }
+    setOpen((p) => !p)
+  }
+
+  const toggle = (val: string) => {
+    const next = new Set(selected)
+    if (next.has(val)) next.delete(val)
+    else next.add(val)
+    onChange(next)
+  }
+
+  const activeCount = selected.size
+  const isActive = activeCount > 0
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        onClick={toggleOpen}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+          padding: '4px 10px',
+          borderRadius: 5,
+          border: `1px solid ${isActive ? 'var(--t-border-strong)' : 'var(--t-border-default)'}`,
+          background: isActive ? 'var(--t-bg-surface)' : 'transparent',
+          color: isActive ? 'var(--t-text-primary)' : 'var(--t-text-secondary)',
+          fontSize: 12,
+          cursor: 'pointer',
+          flexShrink: 0,
+          transition: 'all 0.1s',
+        }}
+      >
+        <Funnel size={12} weight={isActive ? 'fill' : 'regular'} />
+        {label}
+        {activeCount > 0 && (
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              background: 'var(--t-text-primary)',
+              color: 'var(--t-bg-base)',
+              borderRadius: 10,
+              padding: '0 5px',
+              lineHeight: '16px',
+              minWidth: 16,
+              textAlign: 'center',
+            }}
+          >
+            {activeCount}
+          </span>
+        )}
+      </button>
+      {open &&
+        menuPos &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{
+              position: 'fixed',
+              top: menuPos.top,
+              left: menuPos.left,
+              zIndex: 9999,
+              minWidth: 180,
+              maxHeight: 260,
+              overflowY: 'auto',
+              background: 'var(--t-bg-panel)',
+              border: '1px solid var(--t-border-default)',
+              borderRadius: 8,
+              boxShadow: 'var(--t-shadow-sm)',
+              padding: '4px 0',
+            }}
+          >
+            {options.length === 0 ? (
+              <div style={{ padding: '8px 14px', fontSize: 12, color: 'var(--t-text-muted)' }}>
+                No options
+              </div>
+            ) : (
+              <>
+                {options.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => toggle(opt)}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = 'var(--t-sidebar-hover)')
+                    }
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '7px 14px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--t-text-primary)',
+                      fontSize: 12,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: 3,
+                        border: selected.has(opt)
+                          ? '1.5px solid var(--t-text-primary)'
+                          : '1.5px solid var(--t-border-strong)',
+                        background: selected.has(opt) ? 'var(--t-text-primary)' : 'transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        transition: 'all 0.1s',
+                      }}
+                    >
+                      {selected.has(opt) && (
+                        <Check size={9} weight="bold" color="var(--t-bg-base)" />
+                      )}
+                    </div>
+                    {opt}
+                  </button>
+                ))}
+                {activeCount > 0 && (
+                  <>
+                    <div
+                      style={{ height: 1, background: 'var(--t-border-subtle)', margin: '3px 0' }}
+                    />
+                    <button
+                      onClick={() => {
+                        onChange(new Set())
+                        setOpen(false)
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background = 'var(--t-sidebar-hover)')
+                      }
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '7px 14px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--t-text-muted)',
+                        fontSize: 11,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      Clear filter
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+          </div>,
+          document.body
+        )}
+    </>
+  )
+}
+
+// ─── Ring-style status icon ───────────────────────────────────────────────────
+
+function StatusRingIcon({ status, size = 22 }: { status: string; size?: number }) {
+  // pass — green check-circle
+  if (status === 'pass') {
+    return <CheckCircle size={size} weight="fill" color="#22c55e" style={{ flexShrink: 0 }} />
+  }
+  // fail — red warning circle (exclamation)
+  if (status === 'fail') {
+    return <WarningCircle size={size} weight="fill" color="#ef4444" style={{ flexShrink: 0 }} />
+  }
+  // skip — amber forward-arrow circle
+  if (status === 'skip') {
+    return <ArrowCircleRight size={size} weight="fill" color="#f59e0b" style={{ flexShrink: 0 }} />
+  }
+  // blocked — orange prohibition circle
+  if (status === 'blocked') {
+    return <Prohibit size={size} weight="fill" color="#f97316" style={{ flexShrink: 0 }} />
+  }
+
+  // pending — dashed SVG ring, rendered slightly smaller than filled icons
+  const ringSize = Math.max(8, size - 6)
+  const sw = Math.max(1.5, ringSize * 0.08)
+  const r = (ringSize - sw * 2) / 2
+  const dashLen = Math.max(2, r * 0.6)
+  const gapLen = Math.max(1.5, r * 0.3)
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}
+    >
+      <svg width={ringSize} height={ringSize} viewBox={`0 0 ${ringSize} ${ringSize}`}>
+        <circle
+          cx={ringSize / 2}
+          cy={ringSize / 2}
+          r={r}
+          fill="none"
+          stroke="var(--t-border-strong)"
+          strokeWidth={sw}
+          strokeDasharray={`${dashLen} ${gapLen}`}
+          strokeLinecap="round"
+        />
+      </svg>
+    </div>
+  )
 }
 
 function TestRow({
@@ -235,36 +496,135 @@ function TestRow({
         {isChecked && <Check size={10} weight="bold" color="var(--t-bg-base)" />}
       </div>
 
-      {/* Status glyph */}
-      <span
-        style={{
-          fontSize: 15,
-          fontFamily: 'monospace',
-          width: 18,
-          textAlign: 'center',
-          flexShrink: 0,
-          lineHeight: 1,
-          fontWeight: 700,
-          color: STATUS_TEXT[result.status] ?? 'var(--t-text-muted)',
-        }}
-      >
-        {STATUS_LABEL[result.status] ?? '○'}
-      </span>
+      {/* Status ring icon */}
+      <StatusRingIcon status={result.status} />
 
-      {/* Title */}
-      <span
+      {/* Title + sub-text */}
+      <div
         style={{
-          fontSize: 13,
-          color: result.status === 'pending' ? 'var(--t-text-secondary)' : 'var(--t-text-primary)',
           flex: 1,
           minWidth: 0,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
         }}
       >
-        {result.testTitle || `Test #${result.testId}`}
-      </span>
+        <span
+          style={{
+            fontSize: 13,
+            color:
+              result.status === 'pending' ? 'var(--t-text-secondary)' : 'var(--t-text-primary)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            lineHeight: 1.3,
+          }}
+        >
+          {result.testTitle || `Test #${result.testId}`}
+        </span>
+        {/* Sub-text row: internalId · priority · tags · category */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            marginTop: 2,
+            flexWrap: 'nowrap',
+            overflow: 'hidden',
+          }}
+        >
+          {result.internalId && (
+            <span
+              style={{
+                fontSize: 9,
+                fontWeight: 600,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: 'var(--t-text-muted)',
+                flexShrink: 0,
+              }}
+            >
+              {result.internalId}
+            </span>
+          )}
+          {result.internalId && (
+            <span style={{ fontSize: 9, color: 'var(--t-border-default)', flexShrink: 0 }}>·</span>
+          )}
+          <span
+            style={{
+              fontSize: 9,
+              fontWeight: 600,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: PRIORITY_COLOR[result.priority] ?? 'var(--t-text-muted)',
+              flexShrink: 0,
+            }}
+          >
+            {result.priority}
+          </span>
+          {(() => {
+            const tagList: string[] = result.tags
+              ? (() => {
+                  try {
+                    return JSON.parse(result.tags) as string[]
+                  } catch {
+                    return []
+                  }
+                })()
+              : []
+            if (tagList.length === 0) return null
+            return (
+              <>
+                <span style={{ fontSize: 9, color: 'var(--t-border-default)', flexShrink: 0 }}>
+                  ·
+                </span>
+                {tagList.slice(0, 3).map((tag) => (
+                  <span
+                    key={tag}
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 500,
+                      color: 'var(--t-text-muted)',
+                      background: 'var(--t-bg-elevated)',
+                      border: '1px solid var(--t-border-subtle)',
+                      borderRadius: 3,
+                      padding: '0 4px',
+                      flexShrink: 0,
+                      lineHeight: '14px',
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+                {tagList.length > 3 && (
+                  <span style={{ fontSize: 9, color: 'var(--t-text-muted)', flexShrink: 0 }}>
+                    +{tagList.length - 3}
+                  </span>
+                )}
+              </>
+            )
+          })()}
+          {result.category && (
+            <>
+              <span style={{ fontSize: 9, color: 'var(--t-border-default)', flexShrink: 0 }}>
+                ·
+              </span>
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 600,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: 'var(--t-text-muted)',
+                  flexShrink: 0,
+                }}
+              >
+                {result.category}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
 
       {result.executedBy && (
         <span style={{ fontSize: 11, color: 'var(--t-text-muted)', flexShrink: 0 }}>
@@ -496,7 +856,7 @@ function TestDetailPanel({
   return (
     <div
       style={{
-        width: 460,
+        width: 580,
         flexShrink: 0,
         borderLeft: '1px solid var(--t-border-default)',
         background: 'var(--t-bg-surface)',
@@ -764,7 +1124,7 @@ function TestDetailPanel({
       )}
 
       {/* Steps list */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         {result.stepResults.length === 0 ? (
           <div
             style={{
@@ -1060,6 +1420,8 @@ function StepRow({
                 step.status === 'pending' ? 'var(--t-text-secondary)' : 'var(--t-text-primary)',
               lineHeight: 1.55,
               wordBreak: 'break-word',
+              overflowWrap: 'break-word',
+              overflow: 'hidden',
             }}
           />
 
@@ -1151,7 +1513,13 @@ function StepRow({
             <div
               className="rich-preview"
               dangerouslySetInnerHTML={{ __html: step.expectedResult }}
-              style={{ fontSize: 12, color: 'var(--t-text-secondary)', lineHeight: 1.5 }}
+              style={{
+                fontSize: 12,
+                color: 'var(--t-text-secondary)',
+                lineHeight: 1.5,
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
+              }}
             />
           </div>
         )}
@@ -1294,7 +1662,7 @@ function FolderGroup({
 
         {/* Folder icon */}
         <FolderSimple
-          size={13}
+          size={18}
           color="var(--t-text-secondary)"
           weight="fill"
           style={{ flexShrink: 0 }}
@@ -1345,70 +1713,42 @@ function FolderGroup({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <span
             style={{
-              fontSize: 11,
+              fontSize: 13,
               color: 'var(--t-text-muted)',
               fontVariantNumeric: 'tabular-nums',
             }}
           >
             {results.length}
           </span>
-          {pass > 0 && (
-            <span
-              style={{
-                fontSize: 11,
-                color: 'var(--t-accent-success)',
-                fontWeight: 600,
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              {pass}✓
-            </span>
-          )}
-          {fail > 0 && (
-            <span
-              style={{
-                fontSize: 11,
-                color: 'var(--t-accent-danger)',
-                fontWeight: 600,
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              {fail}✗
-            </span>
-          )}
-          {skip > 0 && (
-            <span
-              style={{
-                fontSize: 11,
-                color: 'var(--t-accent-warning)',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              {skip}—
-            </span>
-          )}
-          {blocked > 0 && (
-            <span
-              style={{
-                fontSize: 11,
-                color: 'var(--t-accent-blocked, #f97316)',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              {blocked}⊘
-            </span>
-          )}
-          {pending > 0 && (
-            <span
-              style={{
-                fontSize: 11,
-                color: 'var(--t-text-muted)',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              {pending}○
-            </span>
-          )}
+          {(
+            [
+              { key: 'pass', count: pass, label: 'Passed' },
+              { key: 'fail', count: fail, label: 'Failed' },
+              { key: 'skip', count: skip, label: 'Skipped' },
+              { key: 'blocked', count: blocked, label: 'Blocked' },
+              { key: 'pending', count: pending, label: 'Pending' },
+            ] as const
+          )
+            .filter(({ count }) => count > 0)
+            .map(({ key, count, label }) => (
+              <div
+                key={key}
+                title={`${count} ${label}`}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}
+              >
+                <StatusRingIcon status={key} size={18} />
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fontVariantNumeric: 'tabular-nums',
+                    color: STATUS_TEXT[key] ?? 'var(--t-text-muted)',
+                  }}
+                >
+                  {count}
+                </span>
+              </div>
+            ))}
         </div>
 
         {/* Reset folder button — stop propagation so it doesn't toggle accordion */}
@@ -1969,6 +2309,66 @@ export function RunExecution({
     confirmLabel: string
     onConfirm: () => Promise<void>
   } | null>(null)
+  const [filterPriority, setFilterPriority] = useState<Set<string>>(new Set())
+  const [filterCategory, setFilterCategory] = useState<Set<string>>(new Set())
+  const [filterTags, setFilterTags] = useState<Set<string>>(new Set())
+  const [filterStatus, setFilterStatus] = useState<Set<string>>(new Set())
+  const [folderSort, setFolderSort] = useState<'default' | 'asc' | 'desc'>('default')
+
+  // ── Filter derived values ────────────────────────────────────────────────
+  const allPriorities = useMemo(() => {
+    const s = new Set<string>()
+    results.forEach((r) => {
+      if (r.priority) s.add(r.priority)
+    })
+    return [...s].sort()
+  }, [results])
+
+  const allCategories = useMemo(() => {
+    const s = new Set<string>()
+    results.forEach((r) => {
+      if (r.category) s.add(r.category)
+    })
+    return [...s].sort()
+  }, [results])
+
+  const allTags = useMemo(() => {
+    const s = new Set<string>()
+    results.forEach((r) => {
+      if (!r.tags) return
+      try {
+        ;(JSON.parse(r.tags) as string[]).forEach((t) => s.add(t))
+      } catch {
+        /* */
+      }
+    })
+    return [...s].sort()
+  }, [results])
+
+  const filteredResults = useMemo(() => {
+    return results.filter((r) => {
+      if (filterStatus.size > 0 && !filterStatus.has(r.status)) return false
+      if (filterPriority.size > 0 && !filterPriority.has(r.priority)) return false
+      if (filterCategory.size > 0 && (!r.category || !filterCategory.has(r.category))) return false
+      if (filterTags.size > 0) {
+        let tagList: string[] = []
+        try {
+          tagList = r.tags ? (JSON.parse(r.tags) as string[]) : []
+        } catch {
+          /* */
+        }
+        const hasTag = tagList.some((t) => filterTags.has(t))
+        if (!hasTag) return false
+      }
+      return true
+    })
+  }, [results, filterStatus, filterPriority, filterCategory, filterTags])
+
+  const anyFilterActive =
+    filterStatus.size > 0 ||
+    filterPriority.size > 0 ||
+    filterCategory.size > 0 ||
+    filterTags.size > 0
 
   // ── Bulk selection helpers ────────────────────────────────────────────────
   const toggleBulkSelect = (id: number) => {
@@ -2385,6 +2785,101 @@ export function RunExecution({
               </button>
             </div>
           )}
+          {/* Filter + sort bar */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '7px 14px',
+              borderBottom: '1px solid var(--t-border-subtle)',
+              background: anyFilterActive ? 'var(--t-bg-surface)' : 'transparent',
+              flexShrink: 0,
+              flexWrap: 'wrap',
+            }}
+          >
+            <FilterDropdown
+              label="Status"
+              options={['pending', 'pass', 'fail', 'skip', 'blocked']}
+              selected={filterStatus}
+              onChange={setFilterStatus}
+            />
+            <FilterDropdown
+              label="Priority"
+              options={allPriorities}
+              selected={filterPriority}
+              onChange={setFilterPriority}
+            />
+            <FilterDropdown
+              label="Category"
+              options={allCategories}
+              selected={filterCategory}
+              onChange={setFilterCategory}
+            />
+            <FilterDropdown
+              label="Tags"
+              options={allTags}
+              selected={filterTags}
+              onChange={setFilterTags}
+            />
+            {anyFilterActive && (
+              <button
+                onClick={() => {
+                  setFilterStatus(new Set())
+                  setFilterPriority(new Set())
+                  setFilterCategory(new Set())
+                  setFilterTags(new Set())
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '4px 8px',
+                  borderRadius: 5,
+                  border: '1px solid var(--t-border-subtle)',
+                  background: 'transparent',
+                  color: 'var(--t-text-muted)',
+                  fontSize: 11,
+                  cursor: 'pointer',
+                }}
+              >
+                <X size={10} /> Clear all
+              </button>
+            )}
+            <div style={{ flex: 1 }} />
+            {/* Folder sort toggle */}
+            <button
+              onClick={() =>
+                setFolderSort((p) => (p === 'default' ? 'asc' : p === 'asc' ? 'desc' : 'default'))
+              }
+              title={
+                folderSort === 'default'
+                  ? 'Sort folders A→Z'
+                  : folderSort === 'asc'
+                    ? 'Sort folders Z→A'
+                    : 'Remove sort'
+              }
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '4px 10px',
+                borderRadius: 5,
+                border: `1px solid ${folderSort !== 'default' ? 'var(--t-border-strong)' : 'var(--t-border-default)'}`,
+                background: folderSort !== 'default' ? 'var(--t-bg-surface)' : 'transparent',
+                color:
+                  folderSort !== 'default' ? 'var(--t-text-primary)' : 'var(--t-text-secondary)',
+                fontSize: 12,
+                cursor: 'pointer',
+                flexShrink: 0,
+                transition: 'all 0.1s',
+              }}
+            >
+              <ArrowsDownUp size={12} weight={folderSort !== 'default' ? 'bold' : 'regular'} />
+              Folders{folderSort === 'asc' ? ' A→Z' : folderSort === 'desc' ? ' Z→A' : ''}
+            </button>
+          </div>
+
           <div className="flex-1 overflow-y-auto">
             {results.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
@@ -2410,14 +2905,51 @@ export function RunExecution({
             ) : (
               (() => {
                 const groupMap = new Map<number | null, RunResult[]>()
-                for (const r of results) {
+                for (const r of filteredResults) {
                   const key = r.folderId ?? null
                   if (!groupMap.has(key)) groupMap.set(key, [])
                   groupMap.get(key)!.push(r)
                 }
+                const entries = [...groupMap.entries()]
+                if (folderSort !== 'default') {
+                  entries.sort(([, aItems], [, bItems]) => {
+                    const aName = (aItems[0].folderName || '').toLowerCase()
+                    const bName = (bItems[0].folderName || '').toLowerCase()
+                    return folderSort === 'asc'
+                      ? aName.localeCompare(bName)
+                      : bName.localeCompare(aName)
+                  })
+                }
+                if (entries.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+                      <Funnel size={28} color="#555" />
+                      <p className="text-sm">No tests match the current filters</p>
+                      <button
+                        onClick={() => {
+                          setFilterStatus(new Set())
+                          setFilterPriority(new Set())
+                          setFilterCategory(new Set())
+                          setFilterTags(new Set())
+                        }}
+                        style={{
+                          fontSize: 12,
+                          color: 'var(--t-text-secondary)',
+                          background: 'transparent',
+                          border: '1px solid var(--t-border-default)',
+                          borderRadius: 5,
+                          padding: '4px 12px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Clear filters
+                      </button>
+                    </div>
+                  )
+                }
                 return (
                   <div className="py-3">
-                    {[...groupMap.entries()].map(([folderId, items]) => (
+                    {entries.map(([folderId, items]) => (
                       <FolderGroup
                         key={folderId ?? -1}
                         folderId={folderId}

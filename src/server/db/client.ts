@@ -302,6 +302,20 @@ export async function initDb(config?: DbConfig): Promise<void> {
         tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
         PRIMARY KEY (test_id, tag_id)
       )`,
+      `CREATE TABLE IF NOT EXISTS global_tags (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        color TEXT,
+        created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS')
+      )`,
+      `CREATE TABLE IF NOT EXISTS space_tags (
+        id SERIAL PRIMARY KEY,
+        space_id INTEGER NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        color TEXT,
+        created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS'),
+        UNIQUE(space_id, name)
+      )`,
     ]
     // Run all DDL in one transaction — single round-trip instead of 16
     const pgClient = await pgPool.connect()
@@ -355,6 +369,20 @@ export async function initDb(config?: DbConfig): Promise<void> {
         test_id INTEGER NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
         tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
         PRIMARY KEY (test_id, tag_id)
+      )`)
+      await pgMigrate(`CREATE TABLE IF NOT EXISTS global_tags (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        color TEXT,
+        created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS')
+      )`)
+      await pgMigrate(`CREATE TABLE IF NOT EXISTS space_tags (
+        id SERIAL PRIMARY KEY,
+        space_id INTEGER NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        color TEXT,
+        created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS'),
+        UNIQUE(space_id, name)
       )`)
     } finally {
       pgMigClient.release()
@@ -701,6 +729,28 @@ export async function initDb(config?: DbConfig): Promise<void> {
     test_id INTEGER NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
     tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
     PRIMARY KEY (test_id, tag_id)
+  )`
+    )
+    .catch(() => {})
+  await client
+    .execute(
+      `CREATE TABLE IF NOT EXISTS global_tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    color TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`
+    )
+    .catch(() => {})
+  await client
+    .execute(
+      `CREATE TABLE IF NOT EXISTS space_tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    space_id INTEGER NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    color TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(space_id, name)
   )`
     )
     .catch(() => {})

@@ -9,6 +9,9 @@ import {
   X,
   Palette,
   ArrowCounterClockwise,
+  Tag,
+  Trash,
+  Plus,
 } from '@phosphor-icons/react'
 import { Input } from '@/components/ui/input.js'
 import { Label } from '@/components/ui/label.js'
@@ -18,7 +21,8 @@ import { SsoConfigDialog } from '../AuthConfigDialog/SsoConfigDialog.js'
 import { useAuth } from '../../contexts/AuthContext.js'
 import { useTheme, THEME_PRESETS } from '../../contexts/ThemeContext.js'
 import { api } from '../../lib/api.js'
-import type { AppTheme } from '../../types/index.js'
+import type { AppTheme, GlobalTag } from '../../types/index.js'
+import { TagPill } from '../ui/tag-picker.js'
 
 // ─── Setting card ─────────────────────────────────────────────────────────────
 
@@ -178,6 +182,15 @@ export function AdminSettingsView() {
   const [ssoConfigOpen, setSsoConfigOpen] = useState(false)
   const [currentSsoProvider, setCurrentSsoProvider] = useState<string>('none')
 
+  // ── Global tags state ───────────────────────────────────────────────────────
+  const [globalTagsOpen, setGlobalTagsOpen] = useState(false)
+  const [globalTagList, setGlobalTagList] = useState<GlobalTag[]>([])
+  const [globalTagsLoading, setGlobalTagsLoading] = useState(false)
+  const [newTagName, setNewTagName] = useState('')
+  const [newTagColor, setNewTagColor] = useState('#6366f1')
+  const [tagCreateError, setTagCreateError] = useState('')
+  const [tagCreating, setTagCreating] = useState(false)
+
   // ── Load current config summaries for card badges ───────────────────────────
   useEffect(() => {
     api.dbConfig
@@ -332,6 +345,51 @@ export function AdminSettingsView() {
     }
   }
 
+  // ── Global tags handlers ────────────────────────────────────────────────────
+  const openGlobalTags = async () => {
+    setGlobalTagsOpen(true)
+    setTagCreateError('')
+    setNewTagName('')
+    setGlobalTagsLoading(true)
+    try {
+      const list = await api.globalTags.list()
+      setGlobalTagList(list)
+    } catch {
+      /* ignore */
+    } finally {
+      setGlobalTagsLoading(false)
+    }
+  }
+
+  const handleCreateGlobalTag = async () => {
+    if (!newTagName.trim() || tagCreating) return
+    const trimmed = newTagName.trim()
+    if (globalTagList.some((t) => t.name.toLowerCase() === trimmed.toLowerCase())) {
+      setTagCreateError('A global tag with this name already exists')
+      return
+    }
+    setTagCreating(true)
+    setTagCreateError('')
+    try {
+      const created = await api.globalTags.create({ name: trimmed, color: newTagColor })
+      setGlobalTagList((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
+      setNewTagName('')
+    } catch (err) {
+      setTagCreateError((err as Error).message)
+    } finally {
+      setTagCreating(false)
+    }
+  }
+
+  const handleDeleteGlobalTag = async (tagId: number) => {
+    try {
+      await api.globalTags.delete(tagId)
+      setGlobalTagList((prev) => prev.filter((t) => t.id !== tagId))
+    } catch {
+      /* ignore */
+    }
+  }
+
   // ── DB badge label ──────────────────────────────────────────────────────────
   const dbBadge =
     currentDbType === 'sqlite'
@@ -409,6 +467,15 @@ export function AdminSettingsView() {
             setThemeDialogOpen(true)
           }}
         />
+        {isSuperAdmin && (
+          <SettingCard
+            icon={<Tag size={20} />}
+            title="Global Tags"
+            description="Define tags available across all spaces and apps. Space tags cannot duplicate these."
+            badge={`${globalTagList.length} tag${globalTagList.length !== 1 ? 's' : ''}`}
+            onConfigure={openGlobalTags}
+          />
+        )}
       </div>
 
       {/* ── Database modal ───────────────────────────────────────────────────── */}
@@ -1325,6 +1392,220 @@ export function AdminSettingsView() {
                   </>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Global Tags modal ───────────────────────────────────────────────── */}
+      {globalTagsOpen && isSuperAdmin && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(2px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={() => setGlobalTagsOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--t-bg-panel)',
+              border: '1px solid var(--t-border-default)',
+              borderRadius: 12,
+              width: 480,
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '20px 24px 16px',
+                borderBottom: '1px solid var(--t-border-subtle)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: 'var(--t-bg-elevated)',
+                    border: '1px solid var(--t-border-default)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Tag size={16} color="var(--t-text-secondary)" />
+                </div>
+                <div>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: 'var(--t-text-primary)',
+                    }}
+                  >
+                    Global Tags
+                  </p>
+                  <p style={{ margin: '1px 0 0', fontSize: 11, color: 'var(--t-text-muted)' }}>
+                    Available across all spaces
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setGlobalTagsOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--t-text-muted)',
+                  display: 'flex',
+                  padding: 4,
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Create new tag */}
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--t-border-subtle)' }}>
+              <p
+                style={{
+                  margin: '0 0 10px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: 'var(--t-text-muted)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                Add New Tag
+              </p>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="color"
+                  value={newTagColor}
+                  onChange={(e) => setNewTagColor(e.target.value)}
+                  title="Pick tag color"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    padding: 2,
+                    borderRadius: 6,
+                    border: '1px solid var(--t-border-default)',
+                    background: 'var(--t-bg-elevated)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                />
+                <Input
+                  value={newTagName}
+                  onChange={(e) => {
+                    setNewTagName(e.target.value)
+                    setTagCreateError('')
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCreateGlobalTag()
+                  }}
+                  placeholder="Tag name…"
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  onClick={handleCreateGlobalTag}
+                  disabled={!newTagName.trim() || tagCreating}
+                  style={{ gap: 6, flexShrink: 0 }}
+                >
+                  <Plus size={14} />
+                  {tagCreating ? 'Adding…' : 'Add'}
+                </Button>
+              </div>
+              {tagCreateError && (
+                <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--t-accent-danger)' }}>
+                  {tagCreateError}
+                </p>
+              )}
+            </div>
+
+            {/* Tag list */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 24px 20px' }}>
+              {globalTagsLoading ? (
+                <p style={{ fontSize: 13, color: 'var(--t-text-muted)', padding: '8px 0' }}>
+                  Loading…
+                </p>
+              ) : globalTagList.length === 0 ? (
+                <p style={{ fontSize: 13, color: 'var(--t-text-muted)', padding: '8px 0' }}>
+                  No global tags yet. Add one above.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {globalTagList.map((tag) => (
+                    <div
+                      key={tag.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        background: 'var(--t-bg-surface)',
+                        border: '1px solid var(--t-border-subtle)',
+                      }}
+                    >
+                      <TagPill name={tag.name} color={tag.color} />
+                      <button
+                        onClick={() => handleDeleteGlobalTag(tag.id)}
+                        title="Delete global tag"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'var(--t-text-muted)',
+                          display: 'flex',
+                          padding: 4,
+                          borderRadius: 4,
+                          transition: 'color 0.1s',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = 'var(--t-accent-danger)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = 'var(--t-text-muted)'
+                        }}
+                      >
+                        <Trash size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div
+              style={{
+                padding: '14px 24px',
+                borderTop: '1px solid var(--t-border-subtle)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <Button variant="outline" onClick={() => setGlobalTagsOpen(false)}>
+                Close
+              </Button>
             </div>
           </div>
         </div>

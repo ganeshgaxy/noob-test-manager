@@ -212,6 +212,7 @@ export const tests = sqliteTable('tests', {
       'Performance',
       'Integration',
       'Functional',
+      'Manual',
       'Regression',
       'Smoke & Sanity',
       'Security',
@@ -532,6 +533,35 @@ export const spaceGroupAccess = sqliteTable(
   (t) => [uniqueIndex('space_group_access_space_group_unique').on(t.spaceId, t.groupId)]
 )
 
+// ─── Global tags (system-wide, managed by super_admin) ───────────────────────
+
+export const globalTags = sqliteTable('global_tags', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  color: text('color'),
+  createdAt: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+})
+
+// ─── Space-level tags (per space) ────────────────────────────────────────────
+
+export const spaceTags = sqliteTable(
+  'space_tags',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    spaceId: integer('space_id')
+      .notNull()
+      .references(() => spaces.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    color: text('color'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (t) => [uniqueIndex('space_tags_space_name_unique').on(t.spaceId, t.name)]
+)
+
 // ─── App integrations ─────────────────────────────────────────────────────────
 
 export const appIntegrations = sqliteTable('app_integrations', {
@@ -630,3 +660,9 @@ export type NewAppGroupAccess = typeof appGroupAccess.$inferInsert
 
 export type SpaceGroupAccess = typeof spaceGroupAccess.$inferSelect
 export type NewSpaceGroupAccess = typeof spaceGroupAccess.$inferInsert
+
+export type GlobalTag = typeof globalTags.$inferSelect
+export type NewGlobalTag = typeof globalTags.$inferInsert
+
+export type SpaceTag = typeof spaceTags.$inferSelect
+export type NewSpaceTag = typeof spaceTags.$inferInsert

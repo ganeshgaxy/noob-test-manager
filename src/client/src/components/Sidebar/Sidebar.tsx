@@ -20,11 +20,17 @@ import {
   UserCircle,
   SignOut,
   Key,
+  Tag,
+  X,
+  MagnifyingGlass,
+  ArrowsInSimple,
+  ArrowsOutSimple,
 } from '@phosphor-icons/react'
 import { RowMenu, type RowMenuItem } from '@/components/ui/row-menu.js'
 import { Input } from '@/components/ui/input.js'
 import { Label } from '@/components/ui/label.js'
 import { Button } from '@/components/ui/button.js'
+import { TagPill } from '@/components/ui/tag-picker.js'
 import {
   Dialog,
   DialogContent,
@@ -33,7 +39,15 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog.js'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog.js'
-import type { App, Space, FolderNode, View, TestRun } from '../../types/index.js'
+import type {
+  App,
+  Space,
+  FolderNode,
+  View,
+  TestRun,
+  GlobalTag,
+  SpaceTag,
+} from '../../types/index.js'
 import { useClipboard } from '../../contexts/ClipboardContext.js'
 import { useFolders } from '../../features/folders/hooks.js'
 import { useAuth } from '../../contexts/AuthContext.js'
@@ -86,7 +100,7 @@ function DockBtn({
         border: 'none',
         cursor: disabled ? 'not-allowed' : 'pointer',
         transition: 'all 0.12s',
-        background: active ? 'var(--t-sidebar-active)' : 'transparent',
+        background: active ? 'var(--t-sidebar-hover)' : 'transparent',
         color: active
           ? 'var(--t-text-primary)'
           : disabled
@@ -115,9 +129,118 @@ function DockBtn({
   )
 }
 
+// ─── Search box ───────────────────────────────────────────────────────────────
+
+function SearchBox({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string
+  onChange: (v: string) => void
+  placeholder: string
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        margin: '2px 8px 4px',
+        padding: '4px 8px',
+        borderRadius: 6,
+        background: 'var(--t-bg-surface)',
+        border: '1px solid var(--t-border-subtle)',
+      }}
+    >
+      <MagnifyingGlass size={12} style={{ color: 'var(--t-text-muted)', flexShrink: 0 }} />
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{
+          flex: 1,
+          background: 'none',
+          border: 'none',
+          outline: 'none',
+          fontSize: 12,
+          color: 'var(--t-text-primary)',
+          minWidth: 0,
+        }}
+      />
+      {value && (
+        <button
+          onClick={() => onChange('')}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+            color: 'var(--t-text-muted)',
+            display: 'flex',
+            lineHeight: 1,
+          }}
+        >
+          <X size={11} />
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ─── Section header ───────────────────────────────────────────────────────────
 
-function SectionHeader({ label, onAdd }: { label: string; onAdd?: () => void }) {
+function SectionHeaderIconBtn({
+  title,
+  onClick,
+  children,
+}: {
+  title: string
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      style={{
+        width: 20,
+        height: 20,
+        borderRadius: 4,
+        border: 'none',
+        cursor: 'pointer',
+        background: 'transparent',
+        color: 'var(--t-text-muted)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 0,
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLElement
+        el.style.background = 'var(--t-sidebar-hover)'
+        el.style.color = 'var(--t-text-secondary)'
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLElement
+        el.style.background = 'transparent'
+        el.style.color = 'var(--t-text-muted)'
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+function SectionHeader({
+  label,
+  onAdd,
+  extraActions,
+}: {
+  label: string
+  onAdd?: () => void
+  extraActions?: React.ReactNode
+}) {
   return (
     <div
       style={{
@@ -138,36 +261,14 @@ function SectionHeader({ label, onAdd }: { label: string; onAdd?: () => void }) 
       >
         {label}
       </span>
-      {onAdd && (
-        <button
-          onClick={onAdd}
-          title={`New ${label.replace(/s$/, '')}`}
-          style={{
-            width: 20,
-            height: 20,
-            borderRadius: 4,
-            border: 'none',
-            cursor: 'pointer',
-            background: 'transparent',
-            color: 'var(--t-text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLElement
-            el.style.background = 'var(--t-sidebar-hover)'
-            el.style.color = 'var(--t-text-secondary)'
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLElement
-            el.style.background = 'transparent'
-            el.style.color = 'var(--t-text-muted)'
-          }}
-        >
-          <Plus size={11} />
-        </button>
-      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {extraActions}
+        {onAdd && (
+          <SectionHeaderIconBtn title={`New ${label.replace(/s$/, '')}`} onClick={onAdd}>
+            <Plus size={11} />
+          </SectionHeaderIconBtn>
+        )}
+      </div>
     </div>
   )
 }
@@ -236,7 +337,7 @@ function ActionRow({
         margin: '1px 6px',
         borderRadius: 6,
         background: active
-          ? 'var(--t-sidebar-active)'
+          ? 'var(--t-sidebar-hover)'
           : hovered
             ? 'var(--t-sidebar-hover)'
             : 'transparent',
@@ -388,7 +489,7 @@ function FolderRow({
         margin: '1px 6px',
         borderRadius: 6,
         background: isActive
-          ? 'var(--t-sidebar-active)'
+          ? 'var(--t-sidebar-hover)'
           : hovered
             ? 'var(--t-sidebar-hover)'
             : 'transparent',
@@ -765,6 +866,18 @@ export function Sidebar({
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null)
   const [renameName, setRenameName] = useState('')
   const [renameDesc, setRenameDesc] = useState('')
+  // ── Search state ─────────────────────────────────────────────────────────────
+  const [spaceSearch, setSpaceSearch] = useState('')
+  const [folderSearch, setFolderSearch] = useState('')
+  const [runSearch, setRunSearch] = useState('')
+
+  // Space tags management (shown in rename dialog when target is a space)
+  const [spaceTagList, setSpaceTagList] = useState<SpaceTag[]>([])
+  const [globalTagList, setGlobalTagList] = useState<GlobalTag[]>([])
+  const [newSpaceTagName, setNewSpaceTagName] = useState('')
+  const [newSpaceTagColor, setNewSpaceTagColor] = useState('#6366f1')
+  const [spaceTagError, setSpaceTagError] = useState('')
+  const [spaceTagCreating, setSpaceTagCreating] = useState(false)
 
   const dockSection =
     view.type === 'runs' || view.type === 'run-execution'
@@ -877,6 +990,38 @@ export function Sidebar({
     })
   }
 
+  /** Recursively collect every folder id in the tree */
+  function collectAllFolderIds(nodes: FolderNode[]): number[] {
+    const ids: number[] = []
+    function walk(ns: FolderNode[]) {
+      for (const n of ns) {
+        ids.push(n.id)
+        if (n.children.length > 0) walk(n.children)
+      }
+    }
+    walk(nodes)
+    return ids
+  }
+
+  const handleExpandAll = () => setCollapsedFolderIds(new Set())
+  const handleCollapseAll = () => setCollapsedFolderIds(new Set(collectAllFolderIds(folderTree)))
+
+  /** Flatten folder tree into [{node, path}] for search results */
+  const flatFolderResults = useMemo(() => {
+    if (!folderSearch.trim()) return []
+    const q = folderSearch.toLowerCase()
+    const results: Array<{ node: FolderNode; path: string }> = []
+    function walk(nodes: FolderNode[], parentPath: string) {
+      for (const n of nodes) {
+        const path = parentPath ? `${parentPath} / ${n.name}` : n.name
+        if (n.name.toLowerCase().includes(q)) results.push({ node: n, path })
+        walk(n.children, path)
+      }
+    }
+    walk(folderTree, '')
+    return results
+  }, [folderSearch, folderTree])
+
   const handleAddApp = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!appName.trim()) return
@@ -962,6 +1107,17 @@ export function Sidebar({
     setRenameTarget({ kind: 'space', appId: selectedApp.id, id, currentName, currentDescription })
     setRenameName(currentName)
     setRenameDesc(currentDescription ?? '')
+    setNewSpaceTagName('')
+    setSpaceTagError('')
+    // Load space tags + global tags for the tags section
+    api.spaceTags
+      .list(id)
+      .then(setSpaceTagList)
+      .catch(() => {})
+    api.globalTags
+      .list()
+      .then(setGlobalTagList)
+      .catch(() => {})
   }
   const openRenameFolder = (
     id: number,
@@ -1105,7 +1261,7 @@ export function Sidebar({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: userMenuOpen ? 'var(--t-sidebar-active)' : 'transparent',
+              background: userMenuOpen ? 'var(--t-sidebar-hover)' : 'transparent',
               border: userMenuOpen ? '1px solid var(--t-border-default)' : '1px solid transparent',
               cursor: 'pointer',
               color: userMenuOpen ? 'var(--t-text-primary)' : 'var(--t-text-muted)',
@@ -1257,11 +1413,10 @@ export function Sidebar({
             overflow: 'hidden',
           }}
         >
-          {/* Scrollable content */}
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
-            {/* ── SETTINGS ── */}
-            {dockSection === 'settings' &&
-              (!selectedApp ? (
+          {/* ── SETTINGS ── */}
+          {dockSection === 'settings' && (
+            <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
+              {!selectedApp ? (
                 <p
                   style={{
                     fontSize: 12,
@@ -1310,46 +1465,49 @@ export function Sidebar({
                     }
                   />
                 </>
-              ))}
+              )}
+            </div>
+          )}
 
-            {/* ── USERS ── */}
-            {dockSection === 'users' && (
-              <>
-                <SectionHeader label="User Management" />
-                <ActionRow
-                  icon={
-                    <Users
-                      size={20}
-                      weight={
-                        view.type === 'users' && (view.section === 'users' || !view.section)
-                          ? 'fill'
-                          : 'regular'
-                      }
-                    />
-                  }
-                  label="Users"
-                  active={view.type === 'users' && (view.section === 'users' || !view.section)}
-                  onClick={() => onNavigate({ type: 'users', section: 'users' })}
-                />
-                <ActionRow
-                  icon={
-                    <UsersThree
-                      size={20}
-                      weight={
-                        view.type === 'users' && view.section === 'user-groups' ? 'fill' : 'regular'
-                      }
-                    />
-                  }
-                  label="User Groups"
-                  active={view.type === 'users' && view.section === 'user-groups'}
-                  onClick={() => onNavigate({ type: 'users', section: 'user-groups' })}
-                />
-              </>
-            )}
+          {/* ── USERS ── */}
+          {dockSection === 'users' && (
+            <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
+              <SectionHeader label="User Management" />
+              <ActionRow
+                icon={
+                  <Users
+                    size={20}
+                    weight={
+                      view.type === 'users' && (view.section === 'users' || !view.section)
+                        ? 'fill'
+                        : 'regular'
+                    }
+                  />
+                }
+                label="Users"
+                active={view.type === 'users' && (view.section === 'users' || !view.section)}
+                onClick={() => onNavigate({ type: 'users', section: 'users' })}
+              />
+              <ActionRow
+                icon={
+                  <UsersThree
+                    size={20}
+                    weight={
+                      view.type === 'users' && view.section === 'user-groups' ? 'fill' : 'regular'
+                    }
+                  />
+                }
+                label="User Groups"
+                active={view.type === 'users' && view.section === 'user-groups'}
+                onClick={() => onNavigate({ type: 'users', section: 'user-groups' })}
+              />
+            </div>
+          )}
 
-            {/* ── RUNS ── */}
-            {dockSection === 'runs' &&
-              (!selectedApp ? (
+          {/* ── RUNS ── */}
+          {dockSection === 'runs' &&
+            (!selectedApp ? (
+              <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
                 <p
                   style={{
                     fontSize: 12,
@@ -1360,8 +1518,11 @@ export function Sidebar({
                 >
                   Select an app first
                 </p>
-              ) : (
-                <>
+              </div>
+            ) : (
+              <>
+                {/* Fixed header */}
+                <div style={{ flexShrink: 0 }}>
                   <SectionHeader
                     label="Runs"
                     onAdd={() => {
@@ -1370,6 +1531,10 @@ export function Sidebar({
                       setAddRunOpen(true)
                     }}
                   />
+                  <SearchBox value={runSearch} onChange={setRunSearch} placeholder="Search runs…" />
+                </div>
+                {/* Scrollable list */}
+                <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
                   {runs.length === 0 && (
                     <p
                       style={{
@@ -1382,131 +1547,148 @@ export function Sidebar({
                       No runs yet
                     </p>
                   )}
-                  {runs.map((run) => {
-                    const active = view.type === 'run-execution' && view.runId === run.id
-                    const statusColor =
-                      run.status === 'passed'
-                        ? '#3fb950'
-                        : run.status === 'failed'
-                          ? '#f85149'
-                          : run.status === 'running'
-                            ? '#d29922'
-                            : 'var(--t-text-muted)'
-                    const subtitle = [
-                      selectedApp.name,
-                      run.testCount != null
-                        ? `${run.testCount} test${run.testCount !== 1 ? 's' : ''}`
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')
-                    return (
-                      <div
-                        key={run.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          padding: '6px 4px 6px 12px',
-                          borderRadius: 6,
-                          margin: '1px 6px',
-                          cursor: 'pointer',
-                          background: active
-                            ? 'var(--t-sidebar-active)'
-                            : hoveredRunId === run.id
-                              ? 'var(--t-sidebar-hover)'
-                              : 'transparent',
-                          userSelect: 'none',
-                        }}
-                        onMouseEnter={() => setHoveredRunId(run.id)}
-                        onMouseLeave={() => setHoveredRunId(null)}
-                        onClick={() =>
-                          onNavigate({
-                            type: 'run-execution',
-                            appId: selectedApp.id,
-                            runId: run.id,
-                          })
-                        }
-                      >
-                        {/* Play icon spans both text rows */}
-                        <Play
-                          size={17}
-                          weight="fill"
-                          color={statusColor}
-                          style={{ flexShrink: 0, alignSelf: 'center' }}
-                        />
-                        {/* Two-row text block */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: active ? 'var(--t-text-primary)' : 'var(--t-text-secondary)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              fontWeight: active ? 500 : 400,
-                            }}
-                          >
-                            {run.name}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              color: 'var(--t-text-muted)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              marginTop: 1,
-                            }}
-                          >
-                            {subtitle}
-                          </div>
-                        </div>
-                        {/* Status badge */}
-                        <span
+                  {(() => {
+                    const filteredRuns = runSearch.trim()
+                      ? runs.filter((r) => r.name.toLowerCase().includes(runSearch.toLowerCase()))
+                      : runs
+                    if (runs.length > 0 && filteredRuns.length === 0)
+                      return (
+                        <p
                           style={{
-                            fontSize: 9,
-                            color: statusColor,
-                            background: 'var(--t-bg-elevated)',
-                            border: `1px solid var(--t-border-default)`,
-                            borderRadius: 4,
-                            padding: '1px 4px',
-                            textTransform: 'uppercase',
-                            flexShrink: 0,
+                            fontSize: 11,
+                            color: 'var(--t-text-muted)',
+                            padding: '6px 14px',
+                            fontStyle: 'italic',
                           }}
                         >
-                          {run.status}
-                        </span>
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <RowMenu
-                            size={24}
-                            alwaysVisible={hoveredRunId === run.id}
-                            items={[
-                              {
-                                label: 'Duplicate run',
-                                icon: <CopySimple size={13} />,
-                                action: () => onDuplicateRun(run.id),
-                              },
-                              {
-                                label: 'Delete run',
-                                icon: <Trash size={13} />,
-                                action: () =>
-                                  setConfirmTarget({ kind: 'run', id: run.id, name: run.name }),
-                                destructive: true,
-                                separator: true,
-                              },
-                            ]}
+                          No runs match &ldquo;{runSearch}&rdquo;
+                        </p>
+                      )
+                    return filteredRuns.map((run) => {
+                      const active = view.type === 'run-execution' && view.runId === run.id
+                      const statusColor =
+                        run.status === 'passed'
+                          ? '#3fb950'
+                          : run.status === 'failed'
+                            ? '#f85149'
+                            : run.status === 'running'
+                              ? '#d29922'
+                              : 'var(--t-text-muted)'
+                      const subtitle = [
+                        selectedApp.name,
+                        run.testCount != null
+                          ? `${run.testCount} test${run.testCount !== 1 ? 's' : ''}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                      return (
+                        <div
+                          key={run.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            padding: '6px 4px 6px 12px',
+                            borderRadius: 6,
+                            margin: '1px 6px',
+                            cursor: 'pointer',
+                            background: active
+                              ? 'var(--t-sidebar-hover)'
+                              : hoveredRunId === run.id
+                                ? 'var(--t-sidebar-hover)'
+                                : 'transparent',
+                            userSelect: 'none',
+                          }}
+                          onMouseEnter={() => setHoveredRunId(run.id)}
+                          onMouseLeave={() => setHoveredRunId(null)}
+                          onClick={() =>
+                            onNavigate({
+                              type: 'run-execution',
+                              appId: selectedApp.id,
+                              runId: run.id,
+                            })
+                          }
+                        >
+                          <Play
+                            size={17}
+                            weight="fill"
+                            color={statusColor}
+                            style={{ flexShrink: 0, alignSelf: 'center' }}
                           />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: active ? 'var(--t-text-primary)' : 'var(--t-text-secondary)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                fontWeight: active ? 500 : 400,
+                              }}
+                            >
+                              {run.name}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 10,
+                                color: 'var(--t-text-muted)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                marginTop: 1,
+                              }}
+                            >
+                              {subtitle}
+                            </div>
+                          </div>
+                          <span
+                            style={{
+                              fontSize: 9,
+                              color: statusColor,
+                              background: 'var(--t-bg-elevated)',
+                              border: `1px solid var(--t-border-default)`,
+                              borderRadius: 4,
+                              padding: '1px 4px',
+                              textTransform: 'uppercase',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {run.status}
+                          </span>
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <RowMenu
+                              size={24}
+                              alwaysVisible={hoveredRunId === run.id}
+                              items={[
+                                {
+                                  label: 'Duplicate run',
+                                  icon: <CopySimple size={13} />,
+                                  action: () => onDuplicateRun(run.id),
+                                },
+                                {
+                                  label: 'Delete run',
+                                  icon: <Trash size={13} />,
+                                  action: () =>
+                                    setConfirmTarget({ kind: 'run', id: run.id, name: run.name }),
+                                  destructive: true,
+                                  separator: true,
+                                },
+                              ]}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })}
-                </>
-              ))}
+                      )
+                    })
+                  })()}
+                </div>
+              </>
+            ))}
 
-            {/* ── NAV: Apps ── */}
-            {dockSection === 'nav' && navLevel === 'apps' && (
-              <>
+          {/* ── NAV: Apps ── */}
+          {dockSection === 'nav' && navLevel === 'apps' && (
+            <>
+              <div style={{ flexShrink: 0 }}>
                 <SectionHeader
                   label="Apps"
                   onAdd={() => {
@@ -1515,6 +1697,8 @@ export function Sidebar({
                     setAddAppOpen(true)
                   }}
                 />
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
                 {apps.length === 0 ? (
                   <p
                     style={{
@@ -1545,12 +1729,15 @@ export function Sidebar({
                     />
                   ))
                 )}
-              </>
-            )}
+              </div>
+            </>
+          )}
 
-            {/* ── NAV: Spaces ── */}
-            {dockSection === 'nav' && navLevel === 'spaces' && selectedApp && (
-              <>
+          {/* ── NAV: Spaces ── */}
+          {dockSection === 'nav' && navLevel === 'spaces' && selectedApp && (
+            <>
+              {/* Fixed header */}
+              <div style={{ flexShrink: 0 }}>
                 <SectionHeader
                   label="Spaces"
                   onAdd={() => {
@@ -1559,6 +1746,14 @@ export function Sidebar({
                     setAddSpaceOpen(true)
                   }}
                 />
+                <SearchBox
+                  value={spaceSearch}
+                  onChange={setSpaceSearch}
+                  placeholder="Search spaces…"
+                />
+              </div>
+              {/* Scrollable list */}
+              <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
                 {spaces.length === 0 ? (
                   <p
                     style={{
@@ -1571,44 +1766,69 @@ export function Sidebar({
                     No spaces yet
                   </p>
                 ) : (
-                  spaces.map((space) => {
-                    const parts: string[] = []
-                    if ((space.folderCount ?? 0) > 0)
-                      parts.push(`${space.folderCount} folder${space.folderCount !== 1 ? 's' : ''}`)
-                    if ((space.testCount ?? 0) > 0)
-                      parts.push(`${space.testCount} test${space.testCount !== 1 ? 's' : ''}`)
-                    return (
-                      <ActionRow
-                        key={space.id}
-                        icon={
-                          <Cube
-                            size={20}
-                            weight={activeSpaceId === space.id ? 'fill' : 'regular'}
-                          />
-                        }
-                        label={space.name}
-                        subtitle={parts.length > 0 ? parts.join(' · ') : undefined}
-                        active={activeSpaceId === space.id}
-                        chevron
-                        onClick={() =>
-                          onNavigate({ type: 'tests', appId: selectedApp.id, spaceId: space.id })
-                        }
-                        onRename={() =>
-                          openRenameSpace(space.id, space.name, space.description ?? null)
-                        }
-                        onDelete={() =>
-                          setConfirmTarget({ kind: 'space', id: space.id, name: space.name })
-                        }
-                      />
-                    )
-                  })
+                  (() => {
+                    const filtered = spaceSearch.trim()
+                      ? spaces.filter((s) =>
+                          s.name.toLowerCase().includes(spaceSearch.toLowerCase())
+                        )
+                      : spaces
+                    if (filtered.length === 0)
+                      return (
+                        <p
+                          style={{
+                            fontSize: 12,
+                            color: 'var(--t-text-muted)',
+                            padding: '6px 14px',
+                            fontStyle: 'italic',
+                          }}
+                        >
+                          No spaces match &ldquo;{spaceSearch}&rdquo;
+                        </p>
+                      )
+                    return filtered.map((space) => {
+                      const parts: string[] = []
+                      if ((space.folderCount ?? 0) > 0)
+                        parts.push(
+                          `${space.folderCount} folder${space.folderCount !== 1 ? 's' : ''}`
+                        )
+                      if ((space.testCount ?? 0) > 0)
+                        parts.push(`${space.testCount} test${space.testCount !== 1 ? 's' : ''}`)
+                      return (
+                        <ActionRow
+                          key={space.id}
+                          icon={
+                            <Cube
+                              size={20}
+                              weight={activeSpaceId === space.id ? 'fill' : 'regular'}
+                            />
+                          }
+                          label={space.name}
+                          subtitle={parts.length > 0 ? parts.join(' · ') : undefined}
+                          active={activeSpaceId === space.id}
+                          chevron
+                          onClick={() =>
+                            onNavigate({ type: 'tests', appId: selectedApp.id, spaceId: space.id })
+                          }
+                          onRename={() =>
+                            openRenameSpace(space.id, space.name, space.description ?? null)
+                          }
+                          onDelete={() =>
+                            setConfirmTarget({ kind: 'space', id: space.id, name: space.name })
+                          }
+                        />
+                      )
+                    })
+                  })()
                 )}
-              </>
-            )}
+              </div>
+            </>
+          )}
 
-            {/* ── NAV: Folders ── */}
-            {dockSection === 'nav' && navLevel === 'folders' && selectedApp && activeSpace && (
-              <>
+          {/* ── NAV: Folders ── */}
+          {dockSection === 'nav' && navLevel === 'folders' && selectedApp && activeSpace && (
+            <>
+              {/* Fixed header */}
+              <div style={{ flexShrink: 0 }}>
                 <SectionHeader
                   label="Folders"
                   onAdd={() => {
@@ -1616,7 +1836,35 @@ export function Sidebar({
                     setAddFolderParentId(undefined)
                     setAddFolderOpen(true)
                   }}
+                  extraActions={
+                    folderTree.length > 0 ? (
+                      <SectionHeaderIconBtn
+                        title={
+                          collapsedFolderIds.size === 0
+                            ? 'Collapse all folders'
+                            : 'Expand all folders'
+                        }
+                        onClick={
+                          collapsedFolderIds.size === 0 ? handleCollapseAll : handleExpandAll
+                        }
+                      >
+                        {collapsedFolderIds.size === 0 ? (
+                          <ArrowsInSimple size={11} />
+                        ) : (
+                          <ArrowsOutSimple size={11} />
+                        )}
+                      </SectionHeaderIconBtn>
+                    ) : undefined
+                  }
                 />
+                <SearchBox
+                  value={folderSearch}
+                  onChange={setFolderSearch}
+                  placeholder="Search folders…"
+                />
+              </div>
+              {/* Scrollable list */}
+              <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
                 {folderTree.length === 0 ? (
                   <p
                     style={{
@@ -1628,6 +1876,88 @@ export function Sidebar({
                   >
                     No folders yet
                   </p>
+                ) : folderSearch.trim() ? (
+                  flatFolderResults.length === 0 ? (
+                    <p
+                      style={{
+                        fontSize: 12,
+                        color: 'var(--t-text-muted)',
+                        padding: '6px 14px',
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      No folders match &ldquo;{folderSearch}&rdquo;
+                    </p>
+                  ) : (
+                    flatFolderResults.map(({ node, path }) => (
+                      <div
+                        key={node.id}
+                        onClick={() =>
+                          onNavigate({
+                            type: 'tests',
+                            appId: selectedApp.id,
+                            spaceId: activeSpace.id,
+                            folderId: node.id,
+                          })
+                        }
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 7,
+                          padding: '5px 12px',
+                          margin: '1px 6px',
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          background:
+                            'folderId' in view && view.folderId === node.id
+                              ? 'var(--t-sidebar-hover)'
+                              : 'transparent',
+                        }}
+                        onMouseEnter={(e) => {
+                          ;(e.currentTarget as HTMLElement).style.background =
+                            'var(--t-sidebar-hover)'
+                        }}
+                        onMouseLeave={(e) => {
+                          ;(e.currentTarget as HTMLElement).style.background =
+                            'folderId' in view && view.folderId === node.id
+                              ? 'var(--t-sidebar-hover)'
+                              : 'transparent'
+                        }}
+                      >
+                        <FolderSimple
+                          size={14}
+                          style={{ color: 'var(--t-text-muted)', flexShrink: 0 }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              color: 'var(--t-text-secondary)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {node.name}
+                          </div>
+                          {path !== node.name && (
+                            <div
+                              style={{
+                                fontSize: 10,
+                                color: 'var(--t-text-muted)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                marginTop: 1,
+                              }}
+                            >
+                              {path}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )
                 ) : (
                   <FolderTreeWithActions
                     nodes={folderTree}
@@ -1656,9 +1986,9 @@ export function Sidebar({
                     invalidPasteFolderIds={invalidPasteFolderIds}
                   />
                 )}
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -1919,6 +2249,161 @@ export function Sidebar({
                 placeholder="Optional description"
               />
             </div>
+
+            {/* ── Space-level Tags ── */}
+            {renameTarget?.kind === 'space' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Tag size={13} style={{ color: 'var(--t-text-muted)' }} />
+                  <Label style={{ margin: 0 }}>Space Tags</Label>
+                </div>
+
+                {/* Existing space tags */}
+                {spaceTagList.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {spaceTagList.map((t) => (
+                      <div
+                        key={t.id}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}
+                      >
+                        <TagPill name={t.name} color={t.color} size="sm" />
+                        <button
+                          type="button"
+                          title="Remove tag"
+                          onClick={async () => {
+                            if (!renameTarget) return
+                            await api.spaceTags.delete(renameTarget.id, t.id).catch(() => {})
+                            setSpaceTagList((prev) => prev.filter((x) => x.id !== t.id))
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--t-text-muted)',
+                            padding: 2,
+                            display: 'flex',
+                            borderRadius: 3,
+                            lineHeight: 1,
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = 'var(--t-accent-danger)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'var(--t-text-muted)'
+                          }}
+                        >
+                          <X size={9} weight="bold" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add new space tag */}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    value={newSpaceTagColor}
+                    onChange={(e) => setNewSpaceTagColor(e.target.value)}
+                    title="Tag color"
+                    style={{
+                      width: 30,
+                      height: 30,
+                      padding: 2,
+                      borderRadius: 6,
+                      border: '1px solid var(--t-border-default)',
+                      background: 'var(--t-bg-elevated)',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <Input
+                    value={newSpaceTagName}
+                    onChange={(e) => {
+                      setNewSpaceTagName(e.target.value)
+                      setSpaceTagError('')
+                    }}
+                    onKeyDown={async (e) => {
+                      if (e.key !== 'Enter') return
+                      e.preventDefault()
+                      if (!newSpaceTagName.trim() || !renameTarget || spaceTagCreating) return
+                      const trimmed = newSpaceTagName.trim()
+                      if (
+                        spaceTagList.some((t) => t.name.toLowerCase() === trimmed.toLowerCase())
+                      ) {
+                        setSpaceTagError('A tag with this name already exists in this space')
+                        return
+                      }
+                      setSpaceTagCreating(true)
+                      setSpaceTagError('')
+                      try {
+                        const created = await api.spaceTags.create(renameTarget.id, {
+                          name: trimmed,
+                          color: newSpaceTagColor,
+                        })
+                        setSpaceTagList((prev) =>
+                          prev.some((x) => x.id === created.id) ? prev : [...prev, created]
+                        )
+                        setNewSpaceTagName('')
+                      } catch (err) {
+                        setSpaceTagError((err as Error).message)
+                      } finally {
+                        setSpaceTagCreating(false)
+                      }
+                    }}
+                    placeholder="Tag name… (Enter to add)"
+                    style={{ flex: 1, fontSize: 12 }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={!newSpaceTagName.trim() || spaceTagCreating}
+                    onClick={async () => {
+                      if (!newSpaceTagName.trim() || !renameTarget || spaceTagCreating) return
+                      const trimmed = newSpaceTagName.trim()
+                      if (
+                        spaceTagList.some((t) => t.name.toLowerCase() === trimmed.toLowerCase())
+                      ) {
+                        setSpaceTagError('A tag with this name already exists in this space')
+                        return
+                      }
+                      setSpaceTagCreating(true)
+                      setSpaceTagError('')
+                      try {
+                        const created = await api.spaceTags.create(renameTarget.id, {
+                          name: trimmed,
+                          color: newSpaceTagColor,
+                        })
+                        setSpaceTagList((prev) =>
+                          prev.some((x) => x.id === created.id) ? prev : [...prev, created]
+                        )
+                        setNewSpaceTagName('')
+                      } catch (err) {
+                        setSpaceTagError((err as Error).message)
+                      } finally {
+                        setSpaceTagCreating(false)
+                      }
+                    }}
+                    style={{ gap: 4, flexShrink: 0 }}
+                  >
+                    <Plus size={12} /> Add
+                  </Button>
+                </div>
+                {spaceTagError && (
+                  <p style={{ margin: 0, fontSize: 11, color: 'var(--t-accent-danger)' }}>
+                    {spaceTagError}
+                  </p>
+                )}
+                {globalTagList.length > 0 && (
+                  <p style={{ margin: 0, fontSize: 11, color: 'var(--t-text-muted)' }}>
+                    Global tags are available in all spaces automatically. Space tags cannot share a
+                    name with a global tag.
+                  </p>
+                )}
+              </div>
+            )}
+
             <DialogFooter style={{ marginTop: 8 }}>
               <Button type="button" variant="outline" onClick={() => setRenameTarget(null)}>
                 Cancel

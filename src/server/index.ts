@@ -31,6 +31,8 @@ import {
   themeRouter,
   testmuRouter,
   tagsRouter,
+  globalTagsRouter,
+  spaceTagsRouter,
 } from './api/routes/index.js'
 
 const app = new Hono()
@@ -70,6 +72,8 @@ app.route('/api/auth/sso', ssoRouter)
 app.route('/api/theme', themeRouter)
 app.route('/api/testmu', testmuRouter)
 app.route('/api/apps/:appId/tags', tagsRouter)
+app.route('/api/global-tags', globalTagsRouter)
+app.route('/api/spaces/:spaceId/space-tags', spaceTagsRouter)
 
 /** Create a default super_admin if the users table is empty (first-run bootstrap). */
 async function seedInitialAdmin(): Promise<void> {

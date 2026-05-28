@@ -7,12 +7,28 @@ import {
   ListChecks,
   GitBranch,
   FloppyDisk,
+  PencilSimple,
+  Check,
+  X,
 } from '@phosphor-icons/react'
 import { Input } from '@/components/ui/input.js'
 import { Button } from '@/components/ui/button.js'
 import { RichEditor } from '@/components/ui/rich-editor.js'
-import type { TestDetail, TestStep, BddScenario, View, CustomField } from '../../types/index.js'
+import type {
+  TestDetail,
+  TestStep,
+  BddScenario,
+  View,
+  CustomField,
+  GlobalTag,
+  SpaceTag,
+  TestType,
+  TestPriority,
+  TestStatus,
+  AutomationStatus,
+} from '../../types/index.js'
 import { api } from '../../lib/api.js'
+import { TagPicker } from '@/components/ui/tag-picker.js'
 
 const CURRENT_USER = 'me'
 const BDD_TYPES = ['given', 'when', 'then', 'and', 'but'] as const
@@ -90,7 +106,237 @@ function Select({
   )
 }
 
+// ─── Icon button helper ───────────────────────────────────────────────────────
+
+function IconBtn({
+  onClick,
+  title,
+  danger,
+  children,
+}: {
+  onClick: () => void
+  title: string
+  danger?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      style={{
+        width: 26,
+        height: 26,
+        borderRadius: 5,
+        border: 'none',
+        cursor: 'pointer',
+        background: 'transparent',
+        color: 'var(--t-text-muted)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        transition: 'all 0.1s',
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLElement
+        el.style.background = danger ? 'rgba(229,72,77,0.1)' : 'var(--t-elem-hover)'
+        el.style.color = danger ? 'var(--t-accent-danger)' : 'var(--t-text-secondary)'
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLElement
+        el.style.background = 'transparent'
+        el.style.color = 'var(--t-text-muted)'
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
 // ─── Traditional steps ────────────────────────────────────────────────────────
+
+function TraditionalStepRow({
+  step,
+  index,
+  folderId,
+  testId,
+  onRefresh,
+}: {
+  step: TestStep
+  index: number
+  folderId: number
+  testId: number
+  onRefresh: () => Promise<void>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [editAction, setEditAction] = useState(step.action)
+  const [editExpected, setEditExpected] = useState(step.expectedResult ?? '')
+  const [saving, setSaving] = useState(false)
+
+  const startEdit = () => {
+    setEditAction(step.action)
+    setEditExpected(step.expectedResult ?? '')
+    setEditing(true)
+  }
+
+  const cancelEdit = () => setEditing(false)
+
+  const saveEdit = async () => {
+    if (!editAction || editAction === '<p></p>') return
+    setSaving(true)
+    try {
+      await api.tests.steps.update(folderId, testId, step.id, {
+        action: editAction,
+        expectedResult: editExpected && editExpected !== '<p></p>' ? editExpected : '',
+      })
+      await onRefresh()
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 12,
+        padding: editing ? '14px 16px 16px' : '14px 16px',
+        borderTop: index > 0 ? '1px solid var(--t-border-subtle)' : 'none',
+        background: editing ? 'var(--t-bg-panel)' : 'transparent',
+        transition: 'background 0.1s',
+      }}
+    >
+      {/* Step number circle */}
+      <span
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: '50%',
+          background: 'var(--t-bg-panel)',
+          border: '1px solid var(--t-border-default)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 10,
+          fontWeight: 700,
+          color: 'var(--t-text-muted)',
+          flexShrink: 0,
+          marginTop: 2,
+        }}
+      >
+        {index + 1}
+      </span>
+
+      {editing ? (
+        /* ── Edit mode ── */
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div>
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: 'var(--t-text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                marginBottom: 6,
+              }}
+            >
+              Step action *
+            </p>
+            <RichEditor
+              value={editAction}
+              onChange={setEditAction}
+              placeholder="Describe the action to perform…"
+              minHeight={60}
+              autoFocus
+            />
+          </div>
+          <div>
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: 'var(--t-text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                marginBottom: 6,
+              }}
+            >
+              Expected result{' '}
+              <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+                (optional)
+              </span>
+            </p>
+            <RichEditor
+              value={editExpected}
+              onChange={setEditExpected}
+              placeholder="What should happen after this step?"
+              minHeight={60}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <Button
+              onClick={saveEdit}
+              disabled={saving}
+              style={{ gap: 5, height: 30, fontSize: 12 }}
+            >
+              <Check size={12} weight="bold" />
+              {saving ? 'Saving…' : 'Save'}
+            </Button>
+            <Button variant="outline" onClick={cancelEdit} style={{ height: 30, fontSize: 12 }}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        /* ── Read mode ── */
+        <>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              className="rich-preview"
+              dangerouslySetInnerHTML={{ __html: step.action }}
+              style={{
+                fontSize: 13,
+                color: 'var(--t-text-primary)',
+                lineHeight: 1.6,
+                wordBreak: 'break-word',
+              }}
+            />
+            {step.expectedResult && (
+              <div
+                className="rich-preview"
+                dangerouslySetInnerHTML={{ __html: step.expectedResult }}
+                style={{
+                  fontSize: 12,
+                  color: 'var(--t-text-secondary)',
+                  marginTop: 6,
+                  paddingLeft: 10,
+                  borderLeft: '2px solid var(--t-border-subtle)',
+                  lineHeight: 1.6,
+                  wordBreak: 'break-word',
+                }}
+              />
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+            <IconBtn onClick={startEdit} title="Edit step">
+              <PencilSimple size={12} />
+            </IconBtn>
+            <IconBtn
+              onClick={() => api.tests.steps.delete(folderId, testId, step.id).then(onRefresh)}
+              title="Delete step"
+              danger
+            >
+              <Trash size={12} />
+            </IconBtn>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 function TraditionalSteps({
   steps,
@@ -135,87 +381,14 @@ function TraditionalSteps({
           }}
         >
           {steps.map((s, i) => (
-            <div
+            <TraditionalStepRow
               key={s.id}
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 12,
-                padding: '14px 16px',
-                borderTop: i > 0 ? '1px solid var(--t-border-subtle)' : 'none',
-              }}
-            >
-              <span
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: '50%',
-                  background: 'var(--t-bg-panel)',
-                  border: '1px solid var(--t-border-default)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: 'var(--t-text-muted)',
-                  flexShrink: 0,
-                  marginTop: 2,
-                }}
-              >
-                {i + 1}
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                {/* Render stored HTML */}
-                <div
-                  className="rich-preview"
-                  dangerouslySetInnerHTML={{ __html: s.action }}
-                  style={{ fontSize: 13, color: 'var(--t-text-primary)', lineHeight: 1.6 }}
-                />
-                {s.expectedResult && (
-                  <div
-                    className="rich-preview"
-                    dangerouslySetInnerHTML={{ __html: s.expectedResult }}
-                    style={{
-                      fontSize: 12,
-                      color: 'var(--t-text-secondary)',
-                      marginTop: 6,
-                      paddingLeft: 10,
-                      borderLeft: '2px solid var(--t-border-subtle)',
-                      lineHeight: 1.6,
-                    }}
-                  />
-                )}
-              </div>
-              <button
-                onClick={() => api.tests.steps.delete(folderId, testId, s.id).then(onRefresh)}
-                style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: 5,
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: 'transparent',
-                  color: 'var(--t-text-muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  transition: 'all 0.1s',
-                }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.background = 'rgba(229,72,77,0.1)'
-                  el.style.color = 'var(--t-accent-danger)'
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.background = 'transparent'
-                  el.style.color = 'var(--t-text-muted)'
-                }}
-              >
-                <Trash size={12} />
-              </button>
-            </div>
+              step={s}
+              index={i}
+              folderId={folderId}
+              testId={testId}
+              onRefresh={onRefresh}
+            />
           ))}
         </div>
       ) : (
@@ -318,6 +491,18 @@ function BddScenarioBlock({
   const [stepType, setStepType] = useState<BddType>('given')
   const [stepText, setStepText] = useState('')
 
+  // Scenario header edit state
+  const [editingHeader, setEditingHeader] = useState(false)
+  const [editFeature, setEditFeature] = useState(scenario.feature ?? '')
+  const [editScenario, setEditScenario] = useState(scenario.scenario)
+  const [savingHeader, setSavingHeader] = useState(false)
+
+  // Per-step edit state: stepId → { type, text }
+  const [editingStepId, setEditingStepId] = useState<number | null>(null)
+  const [editStepType, setEditStepType] = useState<BddType>('given')
+  const [editStepText, setEditStepText] = useState('')
+  const [savingStep, setSavingStep] = useState(false)
+
   const addStep = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!stepText.trim()) return
@@ -330,6 +515,54 @@ function BddScenarioBlock({
     onRefresh()
   }
 
+  const saveHeader = async () => {
+    if (!editScenario.trim()) return
+    setSavingHeader(true)
+    try {
+      await api.tests.scenarios.update(folderId, testId, scenario.id, {
+        feature: editFeature.trim() || undefined,
+        scenario: editScenario.trim(),
+      })
+      onRefresh()
+      setEditingHeader(false)
+    } finally {
+      setSavingHeader(false)
+    }
+  }
+
+  const startEditStep = (step: BddScenario['steps'][number]) => {
+    setEditingStepId(step.id)
+    setEditStepType(step.type as BddType)
+    setEditStepText(step.text)
+  }
+
+  const saveStep = async (stepId: number) => {
+    if (!editStepText.trim()) return
+    setSavingStep(true)
+    try {
+      await api.tests.scenarios.steps.update(folderId, testId, scenario.id, stepId, {
+        type: editStepType,
+        text: editStepText.trim(),
+      })
+      onRefresh()
+      setEditingStepId(null)
+    } finally {
+      setSavingStep(false)
+    }
+  }
+
+  const stepSelectStyle: React.CSSProperties = {
+    background: 'var(--t-bg-panel)',
+    border: '1px solid var(--t-border-subtle)',
+    borderRadius: 6,
+    padding: '7px 10px',
+    fontSize: 12,
+    color: 'var(--t-text-secondary)',
+    outline: 'none',
+    width: 84,
+    cursor: 'pointer',
+  }
+
   return (
     <div
       style={{
@@ -339,107 +572,216 @@ function BddScenarioBlock({
         marginBottom: 12,
       }}
     >
+      {/* ── Scenario header ── */}
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
           padding: '11px 16px',
-          borderBottom: scenario.steps.length > 0 ? '1px solid var(--t-border-subtle)' : 'none',
+          borderBottom:
+            scenario.steps.length > 0 || editingHeader
+              ? '1px solid var(--t-border-subtle)'
+              : 'none',
           background: 'var(--t-bg-surface)',
         }}
       >
-        <div>
-          {scenario.feature && (
-            <p
-              style={{
-                fontSize: 10,
-                color: 'var(--t-text-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginBottom: 2,
-              }}
-            >
-              Feature: {scenario.feature}
-            </p>
-          )}
-          <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--t-text-primary)' }}>
-            Scenario: {scenario.scenario}
-          </p>
-        </div>
-        <button
-          onClick={() => api.tests.scenarios.delete(folderId, testId, scenario.id).then(onRefresh)}
-          style={{
-            width: 26,
-            height: 26,
-            borderRadius: 5,
-            border: 'none',
-            cursor: 'pointer',
-            background: 'transparent',
-            color: 'var(--t-text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.1s',
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLElement
-            el.style.background = 'rgba(229,72,77,0.1)'
-            el.style.color = 'var(--t-accent-danger)'
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLElement
-            el.style.background = 'transparent'
-            el.style.color = 'var(--t-text-muted)'
-          }}
-        >
-          <Trash size={12} />
-        </button>
+        {editingHeader ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Input
+              value={editFeature}
+              onChange={(e) => setEditFeature(e.target.value)}
+              placeholder="Feature (optional)"
+              autoFocus
+            />
+            <Input
+              value={editScenario}
+              onChange={(e) => setEditScenario(e.target.value)}
+              placeholder="Scenario title *"
+            />
+            <div style={{ display: 'flex', gap: 6 }}>
+              <Button
+                onClick={saveHeader}
+                disabled={savingHeader}
+                style={{ gap: 5, height: 30, fontSize: 12 }}
+              >
+                <Check size={12} weight="bold" />
+                {savingHeader ? 'Saving…' : 'Save'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setEditingHeader(false)}
+                style={{ height: 30, fontSize: 12 }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              {scenario.feature && (
+                <p
+                  style={{
+                    fontSize: 10,
+                    color: 'var(--t-text-muted)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    marginBottom: 2,
+                  }}
+                >
+                  Feature: {scenario.feature}
+                </p>
+              )}
+              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--t-text-primary)' }}>
+                Scenario: {scenario.scenario}
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 2 }}>
+              <IconBtn
+                onClick={() => {
+                  setEditFeature(scenario.feature ?? '')
+                  setEditScenario(scenario.scenario)
+                  setEditingHeader(true)
+                }}
+                title="Edit scenario"
+              >
+                <PencilSimple size={12} />
+              </IconBtn>
+              <IconBtn
+                onClick={() =>
+                  api.tests.scenarios.delete(folderId, testId, scenario.id).then(onRefresh)
+                }
+                title="Delete scenario"
+                danger
+              >
+                <Trash size={12} />
+              </IconBtn>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* ── Steps ── */}
       <div style={{ padding: '8px 16px 14px' }}>
         {scenario.steps.map((step, i) => (
           <div
-            key={`${step.id}-${i}`}
+            key={step.id}
             style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: 10,
-              padding: '5px 0',
               borderBottom:
                 i < scenario.steps.length - 1 ? '1px solid var(--t-border-subtle)' : 'none',
             }}
           >
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                width: 36,
-                flexShrink: 0,
-                color: BDD_COLORS[step.type] ?? 'var(--t-text-muted)',
-                letterSpacing: '0.04em',
-              }}
-            >
-              {step.type.charAt(0).toUpperCase() + step.type.slice(1)}
-            </span>
-            <span style={{ fontSize: 13, color: 'var(--t-text-primary)' }}>{step.text}</span>
+            {editingStepId === step.id ? (
+              /* Edit mode for this step */
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '6px 0' }}>
+                <select
+                  value={editStepType}
+                  onChange={(e) => setEditStepType(e.target.value as BddType)}
+                  style={stepSelectStyle}
+                >
+                  {BDD_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t.charAt(0).toUpperCase() + t.slice(1)}
+                    </option>
+                  ))}
+                </select>
+                <Input
+                  value={editStepText}
+                  onChange={(e) => setEditStepText(e.target.value)}
+                  placeholder="Step text…"
+                  autoFocus
+                />
+                <button
+                  onClick={() => saveStep(step.id)}
+                  disabled={savingStep}
+                  title="Save"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 5,
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: 'var(--t-accent-success)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Check size={13} weight="bold" />
+                </button>
+                <button
+                  onClick={() => setEditingStepId(null)}
+                  title="Cancel"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 5,
+                    border: '1px solid var(--t-border-default)',
+                    cursor: 'pointer',
+                    background: 'transparent',
+                    color: 'var(--t-text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ) : (
+              /* Read mode for this step */
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: 10,
+                  padding: '5px 0',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    width: 36,
+                    flexShrink: 0,
+                    color: BDD_COLORS[step.type as BddType] ?? 'var(--t-text-muted)',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  {step.type.charAt(0).toUpperCase() + step.type.slice(1)}
+                </span>
+                <span style={{ fontSize: 13, color: 'var(--t-text-primary)', flex: 1 }}>
+                  {step.text}
+                </span>
+                <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                  <IconBtn onClick={() => startEditStep(step)} title="Edit step">
+                    <PencilSimple size={11} />
+                  </IconBtn>
+                  <IconBtn
+                    onClick={() =>
+                      api.tests.scenarios.steps
+                        .delete(folderId, testId, scenario.id, step.id)
+                        .then(onRefresh)
+                    }
+                    title="Delete step"
+                    danger
+                  >
+                    <Trash size={11} />
+                  </IconBtn>
+                </div>
+              </div>
+            )}
           </div>
         ))}
+
+        {/* Add step form */}
         <form onSubmit={addStep} style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <select
             value={stepType}
             onChange={(e) => setStepType(e.target.value as BddType)}
-            style={{
-              background: 'var(--t-bg-panel)',
-              border: '1px solid var(--t-border-subtle)',
-              borderRadius: 6,
-              padding: '7px 10px',
-              fontSize: 12,
-              color: 'var(--t-text-secondary)',
-              outline: 'none',
-              width: 84,
-              cursor: 'pointer',
-            }}
+            style={stepSelectStyle}
           >
             {BDD_TYPES.map((t) => (
               <option key={t} value={t}>
@@ -647,10 +989,16 @@ export function TestEditor({
   const [description, setDescription] = useState('')
   const [preconditions, setPreconditions] = useState('')
   const [notes, setNotes] = useState('')
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium')
-  const [status, setStatus] = useState<'draft' | 'active' | 'deprecated'>('draft')
+  const [priority, setPriority] = useState<TestPriority>('Medium')
+  const [status, setStatus] = useState<TestStatus>('Draft')
+  const [category, setCategory] = useState<TestType | ''>('')
+  const [automationStatus, setAutomationStatus] = useState<AutomationStatus | ''>('')
+  const [estimatedTime, setEstimatedTime] = useState('')
+  const [jiraIssueKey, setJiraIssueKey] = useState('')
   const [assigneeId, setAssigneeId] = useState('')
-  const [tags, setTags] = useState('')
+  const [tags, setTags] = useState<string[]>([])
+  const [globalTagList, setGlobalTagList] = useState<GlobalTag[]>([])
+  const [spaceTagList, setSpaceTagList] = useState<SpaceTag[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [customFields, setCustomFields] = useState<CustomField[]>([])
@@ -665,7 +1013,15 @@ export function TestEditor({
       .list(appId)
       .then((fields) => setCustomFields(fields.sort((a, b) => a.order - b.order)))
       .catch(() => {})
-  }, [appId])
+    api.globalTags
+      .list()
+      .then(setGlobalTagList)
+      .catch(() => {})
+    api.spaceTags
+      .list(spaceId)
+      .then(setSpaceTagList)
+      .catch(() => {})
+  }, [appId, spaceId])
 
   useEffect(() => {
     if (!internalTestId) return
@@ -692,8 +1048,12 @@ export function TestEditor({
       setNotes(t.notes ?? '')
       setPriority(t.priority)
       setStatus(t.status)
+      setCategory((t.category as TestType) ?? '')
+      setAutomationStatus((t.automationStatus as AutomationStatus) ?? '')
+      setEstimatedTime(t.estimatedTime != null ? String(t.estimatedTime) : '')
+      setJiraIssueKey(t.jiraIssueKey ?? '')
       setAssigneeId(t.assigneeId ?? '')
-      setTags(t.tags ? (JSON.parse(t.tags) as string[]).join(', ') : '')
+      setTags(t.tags ? (JSON.parse(t.tags) as string[]) : [])
     } finally {
       setLoading(false)
     }
@@ -725,13 +1085,12 @@ export function TestEditor({
       notes: notes.trim() || undefined,
       priority,
       status,
+      category: (category as TestType) || undefined,
+      automationStatus: (automationStatus as AutomationStatus) || undefined,
+      estimatedTime: estimatedTime ? parseInt(estimatedTime, 10) : undefined,
+      jiraIssueKey: jiraIssueKey.trim() || undefined,
       assigneeId: assigneeId.trim() || undefined,
-      tags: tags
-        ? tags
-            .split(',')
-            .map((t) => t.trim())
-            .filter(Boolean)
-        : undefined,
+      tags: tags.length > 0 ? tags : undefined,
     }
     try {
       if (internalTestId) {
@@ -770,13 +1129,12 @@ export function TestEditor({
       notes: notes.trim() || undefined,
       priority,
       status,
+      category: (category as TestType) || undefined,
+      automationStatus: (automationStatus as AutomationStatus) || undefined,
+      estimatedTime: estimatedTime ? parseInt(estimatedTime, 10) : undefined,
+      jiraIssueKey: jiraIssueKey.trim() || undefined,
       assigneeId: assigneeId.trim() || undefined,
-      tags: tags
-        ? tags
-            .split(',')
-            .map((t) => t.trim())
-            .filter(Boolean)
-        : undefined,
+      tags: tags.length > 0 ? tags : undefined,
     }
     try {
       const created = await api.tests.create(folderId, { ...payload, createdBy: CURRENT_USER })
@@ -1061,20 +1419,72 @@ export function TestEditor({
                   })}
                 </div>
               </Field>
+              <Field label="Category">
+                <Select value={category} onChange={(v) => setCategory(v as TestType | '')}>
+                  <option value="">— None —</option>
+                  <option value="Functional">Functional</option>
+                  <option value="Manual">Manual</option>
+                  <option value="Regression">Regression</option>
+                  <option value="Smoke & Sanity">Smoke &amp; Sanity</option>
+                  <option value="Acceptance">Acceptance</option>
+                  <option value="Accessibility">Accessibility</option>
+                  <option value="Compatibility">Compatibility</option>
+                  <option value="Destructive">Destructive</option>
+                  <option value="Integration">Integration</option>
+                  <option value="Performance">Performance</option>
+                  <option value="Security">Security</option>
+                  <option value="User Interface">User Interface</option>
+                  <option value="Usability">Usability</option>
+                  <option value="Other">Other</option>
+                </Select>
+              </Field>
               <Field label="Priority">
-                <Select value={priority} onChange={(v) => setPriority(v as typeof priority)}>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
+                <Select value={priority} onChange={(v) => setPriority(v as TestPriority)}>
+                  <option value="Lowest">Lowest</option>
+                  <option value="Low">Low</option>
+                  <option value="Normal">Normal</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Highest">Highest</option>
                 </Select>
               </Field>
               <Field label="Status">
-                <Select value={status} onChange={(v) => setStatus(v as typeof status)}>
-                  <option value="draft">Draft</option>
-                  <option value="active">Active</option>
-                  <option value="deprecated">Deprecated</option>
+                <Select value={status} onChange={(v) => setStatus(v as TestStatus)}>
+                  <option value="Draft">Draft</option>
+                  <option value="Unverified">Unverified</option>
+                  <option value="Faulty">Faulty</option>
+                  <option value="Ready">Ready</option>
+                  <option value="Live">Live</option>
+                  <option value="Deprecated">Deprecated</option>
+                  <option value="Archived">Archived</option>
                 </Select>
+              </Field>
+              <Field label="Automation Status">
+                <Select
+                  value={automationStatus}
+                  onChange={(v) => setAutomationStatus(v as AutomationStatus | '')}
+                >
+                  <option value="">— None —</option>
+                  <option value="Not Automated">Not Automated</option>
+                  <option value="To Be Automated">To Be Automated</option>
+                  <option value="Automated">Automated</option>
+                </Select>
+              </Field>
+              <Field label="Estimated Time (minutes)">
+                <Input
+                  type="number"
+                  min="0"
+                  value={estimatedTime}
+                  onChange={(e) => setEstimatedTime(e.target.value)}
+                  placeholder="e.g. 30"
+                />
+              </Field>
+              <Field label="Jira Issue Key">
+                <Input
+                  value={jiraIssueKey}
+                  onChange={(e) => setJiraIssueKey(e.target.value)}
+                  placeholder="e.g. PROJ-123"
+                />
               </Field>
               <Field label="Assignee">
                 <Input
@@ -1083,11 +1493,21 @@ export function TestEditor({
                   placeholder="user@example.com"
                 />
               </Field>
-              <Field label="Tags" hint="Comma-separated">
-                <Input
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                  placeholder="smoke, regression"
+              <Field label="Tags">
+                <TagPicker
+                  selected={tags}
+                  onChange={setTags}
+                  globalTags={globalTagList}
+                  spaceTags={spaceTagList}
+                  onCreateSpaceTag={async (name) => {
+                    try {
+                      const created = await api.spaceTags.create(spaceId, { name })
+                      setSpaceTagList((prev) => [...prev, created])
+                      return created
+                    } catch {
+                      return null
+                    }
+                  }}
                 />
               </Field>
 
