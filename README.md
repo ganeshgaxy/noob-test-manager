@@ -1,16 +1,71 @@
-# noob-sdet
-
-A lightweight, self-hosted test case management tool for SDETs — built to live next to your code, not in a browser tab you never open.
+# noob-test-manager
 
 ![License](https://img.shields.io/badge/license-MIT-blue) ![Version](https://img.shields.io/badge/version-0.1.0-green)
 
+A lightweight, self-hosted test case management tool for SDETs. Run it as a CLI, it spins up a local server and opens a browser UI — all data stored in a SQLite file in your project directory. No SaaS subscription, no data leaving your machine.
+
 ---
 
-## What is this?
+## Install
 
-**noob-sdet** is a local-first test management platform. You run it as a CLI, it spins up a server and opens a browser UI where you can organise test cases, plan test runs, track results and import from TestMu — all stored in a SQLite file that lives in your project directory.
+```bash
+npm install -g noob-sdet
+```
 
-No SaaS subscription. No data leaving your machine. No waiting for Jira to load.
+Or run without installing:
+
+```bash
+npx noob-sdet start
+```
+
+Then open `http://localhost:3000`. To use a different port:
+
+```bash
+noob-sdet start --port 4000
+```
+
+A `noob-sdet.db` file is created in your current directory on first run — that's your entire database.
+
+---
+
+## How to Use
+
+### 1. Create an App
+
+From the home screen click **New App**. Apps are the top-level container — think "product" or "project".
+
+### 2. Create a Space
+
+Inside an app, create a Space. A space maps to a feature area, squad or test suite. Each space has its own folder tree, tags and member access.
+
+### 3. Organise with Folders
+
+Folders nest infinitely. Use them to mirror your feature structure or test pyramid layers (Smoke / Regression / E2E).
+
+### 4. Write Tests
+
+Click **New Test** inside a folder. Choose between:
+
+- **Traditional** — numbered action + expected result steps
+- **BDD / Gherkin** — Given / When / Then scenarios with multiple scenarios per test
+
+Fill in the right-hand metadata panel: category, priority, status, automation status, estimated time, Jira key, assignee, tags.
+
+### 5. Create a Run
+
+Go to **Runs** in the sidebar → **New Run**. Give it a name and an optional environment label (e.g. `staging`). Click **Add Tests** to pick spaces, folders or individual tests.
+
+### 6. Execute
+
+Click **Start** on the run. Tests are grouped by folder. Click a test to open the step-by-step panel on the right. Mark steps individually or use the quick **Pass / Fail / Skip / Block** buttons on each row. Use **bulk select** (checkbox on hover) to mark many tests at once.
+
+### 7. Filter & Sort
+
+Use the filter bar above the test list to narrow by **Status**, **Priority**, **Category** or **Tags**. Toggle the **Folders A→Z** sort to reorder accordion groups.
+
+### 8. Import from TestMu
+
+In a Space, click **Import → Import from TestMu**. Enter your TestMu host URL, email and API token, then pick a project. The import runs server-side with a live progress stream and preserves the full folder hierarchy, test steps, BDD scenarios, priorities, statuses, tags and Jira links.
 
 ---
 
@@ -81,41 +136,6 @@ No SaaS subscription. No data leaving your machine. No waiting for Jira to load.
 
 ---
 
-## Getting Started
-
-### Requirements
-
-- Node.js 18+
-- npm 9+
-
-### Install
-
-```bash
-npm install -g noob-sdet
-```
-
-Or run directly without installing:
-
-```bash
-npx noob-sdet start
-```
-
-### Start the server
-
-```bash
-noob-sdet start
-```
-
-Opens `http://localhost:3000` automatically. A SQLite database (`noob-sdet.db`) is created in the current working directory on first run.
-
-To use a different port:
-
-```bash
-noob-sdet start --port 4000
-```
-
----
-
 ## CLI Reference
 
 The CLI can manage everything headlessly — useful for scripting or CI pipelines.
@@ -161,56 +181,15 @@ noob-sdet run create <appId> "Sprint 42 Regression"
 
 ---
 
-## UI Walkthrough
-
-### 1. Create an App
-
-From the home screen click **New App**. Apps are the top-level container — think "product" or "project".
-
-### 2. Create a Space
-
-Inside an app, create a Space. A space maps to a feature area, squad or test suite. Each space has its own folder tree, tags and member access.
-
-### 3. Organise with Folders
-
-Folders nest infinitely. Use them to mirror your feature structure or test pyramid layers (Smoke / Regression / E2E).
-
-### 4. Write Tests
-
-Click **New Test** inside a folder. Choose between:
-
-- **Traditional** — numbered action + expected result steps
-- **BDD / Gherkin** — Given / When / Then scenarios with multiple scenarios per test
-
-Fill in the right-hand metadata panel: category, priority, status, automation status, estimated time (minutes), Jira key, assignee, tags.
-
-### 5. Create a Run
-
-Go to **Runs** in the sidebar → **New Run**. Give it a name and optional environment label (e.g. `staging`). Click **Add Tests** to pick spaces, folders or individual tests.
-
-### 6. Execute
-
-Click **Start** on the run. Tests are grouped by folder. Click a test to open the step-by-step panel on the right. Mark steps individually or use the quick **Pass / Fail / Skip / Block** buttons on each row. Use **bulk select** (checkbox on hover) to mark many tests at once.
-
-### 7. Filter & Sort
-
-Use the filter bar above the test list to narrow by **Status**, **Priority**, **Category** or **Tags**. Toggle the **Folders A→Z** sort to reorder accordion groups.
-
-### 8. Import from TestMu
-
-In a Space, click **Import → Import from TestMu**. Enter your TestMu host URL, email and API token, then pick a project. The import runs server-side with a live progress stream and preserves the full folder hierarchy.
-
----
-
 ## Data Storage
 
-Everything is stored locally in a SQLite file:
+Everything lives in a single SQLite file:
 
 ```
 ./noob-sdet.db
 ```
 
-Back it up with a simple file copy. Restore by putting the file back and restarting.
+Back it up with a file copy. Restore by putting the file back and restarting.
 
 ---
 
