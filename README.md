@@ -12,9 +12,10 @@ A lightweight, self-hosted test case management tool for SDETs. Run it as a CLI,
 npm install -g @ganeshgaxy/noob-test-manager
 ```
 
-Or run without installing:
+Or run without installing globally:
 
 ```bash
+npm install @ganeshgaxy/noob-test-manager
 npx @ganeshgaxy/noob-test-manager start
 ```
 
