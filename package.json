@@ -1,6 +1,6 @@
 {
   "name": "@ganeshgaxy/noob-test-manager",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A dev tool for SDETs to manage and test web applications",
   "type": "module",
   "bin": {
