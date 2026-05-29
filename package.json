@@ -1,6 +1,6 @@
 {
   "name": "@ganeshgaxy/noob-test-manager",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "A dev tool for SDETs to manage and test web applications",
   "keywords": [
     "sdet",
