@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { readCacheConfig, writeCacheConfig, type CacheConfig } from '../../cache/config.js'
 import { initCache, currentCacheConfig } from '../../cache/client.js'
+import { requireAuth, requireSuperAdmin } from '../middleware/auth.js'
 
 const router = new Hono()
 
@@ -17,7 +18,8 @@ router.get('/', async (c) => {
 })
 
 // POST /api/cache-config/test — probe without saving
-router.post('/test', async (c) => {
+router.post('/test', requireAuth, async (c) => {
+  requireSuperAdmin(c)
   const body = await c.req.json<{ type: string; redisUrl?: string }>()
 
   if (body.type === 'none' || body.type === 'lru') {
@@ -49,7 +51,8 @@ router.post('/test', async (c) => {
 })
 
 // PUT /api/cache-config — save and hot-swap
-router.put('/', async (c) => {
+router.put('/', requireAuth, async (c) => {
+  requireSuperAdmin(c)
   const body = await c.req.json<{
     type: string
     lruMax?: number

@@ -10,7 +10,7 @@ const router = new Hono()
 
 // GET /api/groups — all groups (any authenticated user can read for member-picker)
 router.get('/', requireAuth, async (c) => {
-  const all = await db.select().from(groups).all()
+  const all = await db.select().from(groups)
   return c.json(all)
 })
 

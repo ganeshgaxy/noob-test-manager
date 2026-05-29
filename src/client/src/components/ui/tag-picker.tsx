@@ -291,10 +291,12 @@ export function TagPicker({
                 textAlign: 'left',
               }}
             >
-              <Plus size={14} style={{ color: 'var(--t-accent)', flexShrink: 0 }} />
+              <Plus size={14} style={{ color: 'var(--t-text-secondary)', flexShrink: 0 }} />
               <span>
                 Create space tag{' '}
-                <strong style={{ color: 'var(--t-accent)' }}>&ldquo;{query.trim()}&rdquo;</strong>
+                <strong style={{ color: 'var(--t-text-secondary)' }}>
+                  &ldquo;{query.trim()}&rdquo;
+                </strong>
               </span>
             </button>
           )}

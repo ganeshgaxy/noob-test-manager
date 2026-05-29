@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button.js'
 import { api } from '../../lib/api.js'
 import { useAuth } from '../../contexts/AuthContext.js'
+import { SkeletonBlock, SkeletonRows } from '@/components/ui/skeleton.js'
 import type {
   CustomField,
   AppSettings,
@@ -639,7 +640,7 @@ function TagsTab({ appId }: { appId: number }) {
     await saveTags(tags.filter((t) => t !== tag))
   }
 
-  if (loading) return <div style={{ color: 'var(--t-text-muted)', fontSize: 13 }}>Loading…</div>
+  if (loading) return <SkeletonBlock lines={4} style={{ marginTop: 8 }} />
 
   return (
     <div>
@@ -980,12 +981,7 @@ function GroupAccessSection({ appId, canManage }: { appId: number; canManage: bo
   const existingGroupIds = new Set(groupAccess.map((g) => g.groupId))
   const availableGroups = allGroups.filter((g) => !existingGroupIds.has(g.id))
 
-  if (loading)
-    return (
-      <div style={{ color: 'var(--t-text-muted)', fontSize: 13, padding: '16px 0' }}>
-        Loading groups…
-      </div>
-    )
+  if (loading) return <SkeletonRows count={3} rowHeight={44} padding="8px 0" showIcon={false} />
 
   return (
     <div style={{ marginTop: 28 }}>
@@ -1286,19 +1282,7 @@ function MembersTab({ appId }: { appId: number }) {
 
   const existingUserIds = new Set(members.map((m) => m.userId))
 
-  if (loading)
-    return (
-      <div
-        style={{
-          color: 'var(--t-text-muted)',
-          fontSize: 13,
-          padding: '32px 0',
-          textAlign: 'center',
-        }}
-      >
-        Loading…
-      </div>
-    )
+  if (loading) return <SkeletonRows count={4} rowHeight={48} padding="10px 0" />
 
   return (
     <div>

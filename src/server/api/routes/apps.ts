@@ -14,7 +14,7 @@ router.get('/', requireAuth, async (c) => {
   if (user.globalRole === 'super_admin') {
     const cached = await cache.get<(typeof apps.$inferSelect)[]>('apps:all')
     if (cached) return c.json(cached)
-    const all = await db.select().from(apps).all()
+    const all = await db.select().from(apps)
     await cache.set('apps:all', all)
     return c.json(all)
   }

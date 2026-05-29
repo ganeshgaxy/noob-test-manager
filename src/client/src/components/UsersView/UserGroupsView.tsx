@@ -4,6 +4,7 @@ import { Button } from '../ui/button.js'
 import { Input } from '../ui/input.js'
 import { api } from '../../lib/api.js'
 import type { Group, GroupMember } from '../../types/index.js'
+import { SkeletonSidebarItem, SkeletonRows } from '../ui/skeleton.js'
 
 // ─── UserGroupsView ───────────────────────────────────────────────────────────
 
@@ -281,9 +282,7 @@ export function UserGroupsView() {
 
           <div style={{ overflowY: 'auto', flex: 1 }}>
             {groupsLoading ? (
-              <p style={{ padding: 16, fontSize: 13, color: 'var(--t-text-muted)', margin: 0 }}>
-                Loading…
-              </p>
+              Array.from({ length: 4 }).map((_, i) => <SkeletonSidebarItem key={i} i={i} />)
             ) : groups.length === 0 ? (
               <p
                 style={{
@@ -506,9 +505,7 @@ export function UserGroupsView() {
               {/* Members list */}
               <div style={{ flex: 1, overflowY: 'auto' }}>
                 {membersLoading ? (
-                  <p style={{ padding: 16, fontSize: 13, color: 'var(--t-text-muted)', margin: 0 }}>
-                    Loading…
-                  </p>
+                  <SkeletonRows count={4} rowHeight={44} padding="8px 16px" iconSize={24} />
                 ) : members.length === 0 ? (
                   <p
                     style={{

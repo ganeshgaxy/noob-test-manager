@@ -150,12 +150,9 @@ async function collectTestIdsForFolder(folderId: number): Promise<number[]> {
 
 /** Collect all test IDs under a space (all its folders, recursively). */
 async function collectTestIdsForSpace(spaceId: number): Promise<number[]> {
-  const rootFolders = await db
-    .select()
-    .from(folders)
-    .where(eq(folders.spaceId, spaceId))
-    // Only root-level folders; sub-folders are handled by collectTestIdsForFolder
-    .all()
+  const rootFolders = await db.select().from(folders).where(eq(folders.spaceId, spaceId))
+  // Only root-level folders; sub-folders are handled by collectTestIdsForFolder
+
   const rootFolderIds = rootFolders.filter((f) => f.parentFolderId === null).map((f) => f.id)
   const ids = await Promise.all(rootFolderIds.map((id) => collectTestIdsForFolder(id)))
   return ids.flat()
@@ -183,7 +180,15 @@ async function expandPackItems(runId: number): Promise<number[]> {
 async function createRunResultRows(runId: number, testIds: number[]) {
   if (!testIds.length) return
 
-  for (const testId of testIds) {
+  // Pre-validate: only insert results for tests that actually exist (avoids FK constraint violations
+  // that occur when tests were deleted after being added to a pack, or from partial/failed imports)
+  const existingTests = await db.select().from(tests).where(inArray(tests.id, testIds))
+  const testMap = Object.fromEntries(existingTests.map((t) => [t.id, t]))
+  const validIds = testIds.filter((id) => testMap[id] !== undefined)
+
+  if (!validIds.length) return
+
+  for (const testId of validIds) {
     const [result] = await db
       .insert(runResults)
       .values({
@@ -193,7 +198,7 @@ async function createRunResultRows(runId: number, testIds: number[]) {
       })
       .returning()
 
-    const [test] = await db.select().from(tests).where(eq(tests.id, testId))
+    const test = testMap[testId]
     if (!test) continue
 
     if (test.type === 'traditional') {
@@ -537,7 +542,7 @@ router.patch('/:runId/results/bulk', requireAuth, async (c) => {
 
   if (!testIds.length) return c.json({ updated: 0 })
 
-  const affected = await db.select().from(runResults).where(eq(runResults.runId, runId)).all()
+  const affected = await db.select().from(runResults).where(eq(runResults.runId, runId))
   const toUpdate = affected.filter((r) => testIds.includes(r.testId))
 
   for (const result of toUpdate) {

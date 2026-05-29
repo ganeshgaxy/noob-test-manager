@@ -12,6 +12,7 @@ import {
 import { ClipboardProvider } from './contexts/ClipboardContext.js'
 import { AuthProvider, useAuth } from './contexts/AuthContext.js'
 import { ThemeProvider } from './contexts/ThemeContext.js'
+import { BrandingProvider } from './contexts/BrandingContext.js'
 import { LoginView } from './components/LoginView/LoginView.js'
 import { ForgotPasswordView } from './components/LoginView/ForgotPasswordView.js'
 import { ResetPasswordView } from './components/LoginView/ResetPasswordView.js'
@@ -153,9 +154,11 @@ function AuthGate() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <AuthGate />
-      </AuthProvider>
+      <BrandingProvider>
+        <AuthProvider>
+          <AuthGate />
+        </AuthProvider>
+      </BrandingProvider>
     </ThemeProvider>
   )
 }
@@ -207,7 +210,13 @@ function AppShell() {
     removeApp,
     refetch: refetchApps,
   } = useApps()
-  const { spaces, addSpace, removeSpace, refetch: refetchSpaces } = useSpaces(activeAppId)
+  const {
+    spaces,
+    loading: spacesLoading,
+    addSpace,
+    removeSpace,
+    refetch: refetchSpaces,
+  } = useSpaces(activeAppId)
 
   // Listen for rename events dispatched by Sidebar after API calls complete
   useEffect(() => {
@@ -221,7 +230,13 @@ function AppShell() {
     }
   }, [refetchApps, refetchSpaces])
   const { tree: folderTree } = useFolders(activeSpaceId)
-  const { runs, createRun, removeRun, refetch: refetchRuns } = useRuns(activeAppId)
+  const {
+    runs,
+    loading: runsLoading,
+    createRun,
+    removeRun,
+    refetch: refetchRuns,
+  } = useRuns(activeAppId)
   const {
     results,
     report,
@@ -347,7 +362,9 @@ function AppShell() {
             apps={apps}
             selectedApp={selectedApp}
             spaces={spaces}
+            spacesLoading={spacesLoading}
             runs={runs}
+            runsLoading={runsLoading}
             view={view}
             onNavigate={navigate}
             onAddApp={addApp}
@@ -373,6 +390,7 @@ function AppShell() {
           {view.type === 'apps' && (
             <AppsView
               apps={apps}
+              loading={appsLoading}
               onNavigate={navigate}
               onAdd={addApp}
               onRename={updateApp}

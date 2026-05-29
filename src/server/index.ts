@@ -29,6 +29,7 @@ import {
   groupsRouter,
   ssoRouter,
   themeRouter,
+  brandingRouter,
   testmuRouter,
   tagsRouter,
   globalTagsRouter,
@@ -70,6 +71,7 @@ app.route('/api/auth-config', authConfigRouter)
 app.route('/api/groups', groupsRouter)
 app.route('/api/auth/sso', ssoRouter)
 app.route('/api/theme', themeRouter)
+app.route('/api/branding', brandingRouter)
 app.route('/api/testmu', testmuRouter)
 app.route('/api/apps/:appId/tags', tagsRouter)
 app.route('/api/global-tags', globalTagsRouter)

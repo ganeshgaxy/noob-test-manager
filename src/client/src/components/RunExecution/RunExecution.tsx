@@ -34,6 +34,8 @@ import { Separator } from '@/components/ui/separator.js'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog.js'
 import { cn } from '@/lib/utils.js'
 import { api } from '../../lib/api.js'
+import { getFoldersFromCache, setFoldersInCache } from '../../features/folders/hooks.js'
+import { getTestsFromCache, setTestsInCache } from '../../features/tests/hooks.js'
 import type {
   TestRun,
   RunResult,
@@ -44,6 +46,7 @@ import type {
   FolderNode,
   Test,
 } from '../../types/index.js'
+import { Skeleton, SkeletonRows } from '@/components/ui/skeleton.js'
 
 interface Props {
   run: TestRun | null
@@ -1904,11 +1907,20 @@ function TestTreePicker({ spaces, value, onChange }: TreePickerProps) {
   valueRef.current = value
 
   const ensureSpaceFolders = async (spaceId: number): Promise<FolderNode[]> => {
+    // Check component-local map first (already processed into FolderNode[])
     const existing = spaceFolders.get(spaceId)
     if (existing) return existing
+    // Then check the module-level flat cache; build tree from it without a network hit
+    const cached = getFoldersFromCache(spaceId)
+    if (cached) {
+      const tree = buildPickerTree(cached)
+      setSpaceFolders((p) => new Map([...p, [spaceId, tree]]))
+      return tree
+    }
     setSpaceLoading((p) => new Set([...p, spaceId]))
     try {
       const flat = await api.folders.list(spaceId)
+      setFoldersInCache(spaceId, flat) // populate shared cache for future hooks
       const tree = buildPickerTree(flat)
       setSpaceFolders((p) => new Map([...p, [spaceId, tree]]))
       return tree
@@ -1941,16 +1953,23 @@ function TestTreePicker({ spaces, value, onChange }: TreePickerProps) {
       return n
     })
     if (willExpand && !folderTests.has(folderId)) {
-      setFolderTestsLoading((p) => new Set([...p, folderId]))
-      try {
-        const tests = await api.tests.list(folderId)
-        setFolderTests((p) => new Map([...p, [folderId, tests]]))
-      } finally {
-        setFolderTestsLoading((p) => {
-          const n = new Set(p)
-          n.delete(folderId)
-          return n
-        })
+      // Check module-level cache before making a network request
+      const cached = getTestsFromCache(folderId)
+      if (cached) {
+        setFolderTests((p) => new Map([...p, [folderId, cached]]))
+      } else {
+        setFolderTestsLoading((p) => new Set([...p, folderId]))
+        try {
+          const tests = await api.tests.list(folderId)
+          setTestsInCache(folderId, tests) // populate shared cache
+          setFolderTests((p) => new Map([...p, [folderId, tests]]))
+        } finally {
+          setFolderTestsLoading((p) => {
+            const n = new Set(p)
+            n.delete(folderId)
+            return n
+          })
+        }
       }
     }
   }
@@ -1986,13 +2005,25 @@ function TestTreePicker({ spaces, value, onChange }: TreePickerProps) {
   ): Promise<Map<number, Test[]>> => {
     const node = findInTree(folderId, tree)
     const subIds = [folderId, ...flatFolderIds(node?.children ?? [])]
-    const toLoad = subIds.filter((fid) => !folderTests.has(fid))
     const updated = new Map(folderTests)
+    // Seed from module-level cache where available (no network hit)
+    subIds.forEach((fid) => {
+      if (!updated.has(fid)) {
+        const cached = getTestsFromCache(fid)
+        if (cached) updated.set(fid, cached)
+      }
+    })
+    const toLoad = subIds.filter((fid) => !updated.has(fid))
     if (toLoad.length) {
       const results = await Promise.all(
         toLoad.map(async (fid) => ({ fid, tests: await api.tests.list(fid) }))
       )
-      results.forEach(({ fid, tests }) => updated.set(fid, tests))
+      results.forEach(({ fid, tests }) => {
+        setTestsInCache(fid, tests) // populate shared cache
+        updated.set(fid, tests)
+      })
+      setFolderTests(updated)
+    } else if (updated.size !== folderTests.size) {
       setFolderTests(updated)
     }
     return updated
@@ -2011,13 +2042,25 @@ function TestTreePicker({ spaces, value, onChange }: TreePickerProps) {
   const toggleSpaceSelect = async (spaceId: number) => {
     const tree = await ensureSpaceFolders(spaceId)
     const allFolderIds = flatFolderIds(tree)
-    const toLoad = allFolderIds.filter((fid) => !folderTests.has(fid))
     const testMap = new Map(folderTests)
+    // Seed from module-level cache where available
+    allFolderIds.forEach((fid) => {
+      if (!testMap.has(fid)) {
+        const cached = getTestsFromCache(fid)
+        if (cached) testMap.set(fid, cached)
+      }
+    })
+    const toLoad = allFolderIds.filter((fid) => !testMap.has(fid))
     if (toLoad.length) {
       const results = await Promise.all(
         toLoad.map(async (fid) => ({ fid, tests: await api.tests.list(fid) }))
       )
-      results.forEach(({ fid, tests }) => testMap.set(fid, tests))
+      results.forEach(({ fid, tests }) => {
+        setTestsInCache(fid, tests) // populate shared cache
+        testMap.set(fid, tests)
+      })
+      setFolderTests(testMap)
+    } else if (testMap.size !== folderTests.size) {
       setFolderTests(testMap)
     }
     const collectAll = (nodes: FolderNode[]): number[] =>
@@ -2475,8 +2518,62 @@ export function RunExecution({
 
   if (loading || !run)
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-        Loading…
+      <div
+        className="flex-1 flex flex-col overflow-hidden"
+        style={{ background: 'var(--t-bg-base)' }}
+      >
+        {/* header skeleton */}
+        <div
+          style={{
+            height: 48,
+            borderBottom: '1px solid var(--t-border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '0 20px',
+            flexShrink: 0,
+          }}
+        >
+          <Skeleton width={120} height={14} borderRadius={3} />
+          <Skeleton width={60} height={22} borderRadius={4} />
+          <div style={{ flex: 1 }} />
+          <Skeleton width={80} height={22} borderRadius={4} />
+          <Skeleton width={80} height={22} borderRadius={4} />
+        </div>
+        {/* progress bar skeleton */}
+        <div
+          style={{
+            height: 36,
+            borderBottom: '1px solid var(--t-border-subtle)',
+            padding: '0 20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            flexShrink: 0,
+          }}
+        >
+          <Skeleton height={8} borderRadius={99} />
+        </div>
+        {/* filter bar skeleton */}
+        <div
+          style={{
+            height: 42,
+            borderBottom: '1px solid var(--t-border-subtle)',
+            padding: '0 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flexShrink: 0,
+          }}
+        >
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} width={80} height={26} borderRadius={5} />
+          ))}
+        </div>
+        {/* list skeleton */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <SkeletonRows count={8} rowHeight={48} padding="10px 20px" showIcon={false} />
+        </div>
       </div>
     )
 

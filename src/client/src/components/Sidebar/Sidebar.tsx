@@ -52,12 +52,15 @@ import { useClipboard } from '../../contexts/ClipboardContext.js'
 import { useFolders } from '../../features/folders/hooks.js'
 import { useAuth } from '../../contexts/AuthContext.js'
 import { api } from '../../lib/api.js'
+import { SkeletonSidebarItem } from '@/components/ui/skeleton.js'
 
 interface Props {
   apps: App[]
   selectedApp: App | null
   spaces: Space[]
+  spacesLoading?: boolean
   runs: TestRun[]
+  runsLoading?: boolean
   view: View
   onNavigate: (v: View) => void
   onAddApp: (d: { name: string; description?: string }) => Promise<App>
@@ -807,7 +810,9 @@ export function Sidebar({
   apps,
   selectedApp,
   spaces,
+  spacesLoading,
   runs,
+  runsLoading,
   view,
   onNavigate,
   onAddApp,
@@ -897,6 +902,7 @@ export function Sidebar({
   const activeSpace = spaces.find((s) => s.id === activeSpaceId) ?? null
   const {
     tree: folderTree,
+    loading: foldersLoading,
     addFolder,
     removeFolder,
     refetch: refetchFolders,
@@ -1535,18 +1541,20 @@ export function Sidebar({
                 </div>
                 {/* Scrollable list */}
                 <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
-                  {runs.length === 0 && (
-                    <p
-                      style={{
-                        fontSize: 11,
-                        color: 'var(--t-text-muted)',
-                        padding: '6px 14px',
-                        fontStyle: 'italic',
-                      }}
-                    >
-                      No runs yet
-                    </p>
-                  )}
+                  {runsLoading
+                    ? Array.from({ length: 4 }).map((_, i) => <SkeletonSidebarItem key={i} i={i} />)
+                    : runs.length === 0 && (
+                        <p
+                          style={{
+                            fontSize: 11,
+                            color: 'var(--t-text-muted)',
+                            padding: '6px 14px',
+                            fontStyle: 'italic',
+                          }}
+                        >
+                          No runs yet
+                        </p>
+                      )}
                   {(() => {
                     const filteredRuns = runSearch.trim()
                       ? runs.filter((r) => r.name.toLowerCase().includes(runSearch.toLowerCase()))
@@ -1754,7 +1762,9 @@ export function Sidebar({
               </div>
               {/* Scrollable list */}
               <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
-                {spaces.length === 0 ? (
+                {spacesLoading ? (
+                  Array.from({ length: 4 }).map((_, i) => <SkeletonSidebarItem key={i} i={i} />)
+                ) : spaces.length === 0 ? (
                   <p
                     style={{
                       fontSize: 12,
@@ -1865,7 +1875,9 @@ export function Sidebar({
               </div>
               {/* Scrollable list */}
               <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
-                {folderTree.length === 0 ? (
+                {foldersLoading ? (
+                  Array.from({ length: 6 }).map((_, i) => <SkeletonSidebarItem key={i} i={i} />)
+                ) : folderTree.length === 0 ? (
                   <p
                     style={{
                       fontSize: 12,

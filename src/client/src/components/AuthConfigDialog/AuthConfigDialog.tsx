@@ -80,7 +80,7 @@ function Field({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <Label style={{ fontSize: 12, color: 'var(--t-text-secondary)' }}>
         {label}
-        {required && <span style={{ color: '#e5484d', marginLeft: 2 }}>*</span>}
+        {required && <span style={{ color: 'var(--t-accent-danger)', marginLeft: 2 }}>*</span>}
       </Label>
       {children}
     </div>
@@ -292,7 +292,7 @@ export function AuthConfigDialog({ open, onClose }: Props) {
                   justifyContent: 'center',
                 }}
               >
-                <ShieldCheck size={16} weight="fill" color="#888" />
+                <ShieldCheck size={16} weight="fill" color="var(--t-text-secondary)" />
               </div>
               <div>
                 <p
@@ -497,19 +497,19 @@ export function AuthConfigDialog({ open, onClose }: Props) {
                     gap: 8,
                     padding: '10px 14px',
                     borderRadius: 8,
-                    background: status.ok ? 'rgba(61,214,140,0.08)' : 'rgba(229,72,77,0.08)',
-                    border: `1px solid ${status.ok ? 'rgba(61,214,140,0.25)' : 'rgba(229,72,77,0.25)'}`,
+                    background: status.ok ? 'rgba(34,197,94,0.08)' : 'rgba(229,72,77,0.08)',
+                    border: `1px solid ${status.ok ? 'rgba(34,197,94,0.2)' : 'rgba(229,72,77,0.2)'}`,
                     marginBottom: 16,
+                    fontSize: 13,
+                    color: status.ok ? 'var(--t-accent-success)' : 'var(--t-accent-danger)',
                   }}
                 >
                   {status.ok ? (
-                    <CheckCircle size={15} weight="fill" color="#3dd68c" />
+                    <CheckCircle size={15} weight="fill" />
                   ) : (
-                    <Warning size={15} weight="fill" color="#e5484d" />
+                    <Warning size={15} weight="fill" />
                   )}
-                  <span style={{ fontSize: 13, color: status.ok ? '#3dd68c' : '#e5484d' }}>
-                    {status.message}
-                  </span>
+                  {status.message}
                 </div>
               )}
 

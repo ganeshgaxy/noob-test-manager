@@ -9,7 +9,7 @@ export const fieldsRouter = new Hono()
 
 fieldsRouter.get('/', async (c) => {
   const appId = Number(c.req.param('appId'))
-  const fields = await db.select().from(customFields).where(eq(customFields.appId, appId)).all()
+  const fields = await db.select().from(customFields).where(eq(customFields.appId, appId))
   return c.json(fields)
 })
 
@@ -25,7 +25,7 @@ fieldsRouter.post('/', async (c) => {
   }>()
   if (!body.name?.trim()) return c.json({ error: 'name is required' }, 400)
 
-  const existing = await db.select().from(customFields).where(eq(customFields.appId, appId)).all()
+  const existing = await db.select().from(customFields).where(eq(customFields.appId, appId))
   const [created] = await db
     .insert(customFields)
     .values({
@@ -47,7 +47,7 @@ fieldsRouter.get('/values/:testId', async (c) => {
     .select()
     .from(customFieldValues)
     .where(eq(customFieldValues.testId, testId))
-    .all()
+
   return c.json(values)
 })
 
@@ -59,7 +59,6 @@ fieldsRouter.put('/values/:testId', async (c) => {
     .select()
     .from(customFieldValues)
     .where(and(eq(customFieldValues.testId, testId), eq(customFieldValues.fieldId, body.fieldId)))
-    .all()
 
   if (existing.length > 0) {
     const [updated] = await db
@@ -122,7 +121,7 @@ export const appSettingsRouter = new Hono()
 
 appSettingsRouter.get('/', async (c) => {
   const appId = Number(c.req.param('appId'))
-  const rows = await db.select().from(appSettings).where(eq(appSettings.appId, appId)).all()
+  const rows = await db.select().from(appSettings).where(eq(appSettings.appId, appId))
   const result: Record<string, unknown> = {}
   for (const row of rows) {
     try {
@@ -144,7 +143,6 @@ appSettingsRouter.put('/:key', async (c) => {
     .select()
     .from(appSettings)
     .where(and(eq(appSettings.appId, appId), eq(appSettings.key, key)))
-    .all()
 
   if (existing.length > 0) {
     const [updated] = await db
@@ -165,7 +163,7 @@ export const integrationsRouter = new Hono()
 
 integrationsRouter.get('/', async (c) => {
   const appId = Number(c.req.param('appId'))
-  const rows = await db.select().from(appIntegrations).where(eq(appIntegrations.appId, appId)).all()
+  const rows = await db.select().from(appIntegrations).where(eq(appIntegrations.appId, appId))
   return c.json(rows.map((r) => ({ ...r, config: JSON.parse(r.config) })))
 })
 
@@ -180,7 +178,6 @@ integrationsRouter.put('/:type', async (c) => {
     .select()
     .from(appIntegrations)
     .where(and(eq(appIntegrations.appId, appId), eq(appIntegrations.type, type)))
-    .all()
 
   if (existing.length > 0) {
     const [updated] = await db

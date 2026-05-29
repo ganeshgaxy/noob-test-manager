@@ -171,12 +171,9 @@ export function TestMuImportDialog({ open, onClose, appId }: Props) {
       return
     }
 
-    // Mark all selected projects as running immediately
-    setProgress((prev) =>
-      prev.map((p) => ({ ...p, status: 'running' as const, activity: 'Starting…' }))
-    )
-
-    // Parse the SSE stream
+    // Parse the SSE stream — project status is driven entirely by SSE events.
+    // Projects stay 'pending' / "Queued" until the server actually starts them
+    // (PROJECT_CONCURRENCY=1 means only one runs at a time).
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
     let buf = ''
@@ -212,7 +209,7 @@ export function TestMuImportDialog({ open, onClose, appId }: Props) {
             if (p.projectId !== pid) return p
             switch (event.type) {
               case 'activity':
-                return { ...p, activity: event.msg ?? p.activity }
+                return { ...p, status: 'running' as const, activity: event.msg ?? p.activity }
               case 'folder-created':
                 return { ...p, foldersCreated: p.foldersCreated + 1 }
               case 'test-created':
@@ -619,7 +616,9 @@ export function TestMuImportDialog({ open, onClose, appId }: Props) {
                     }}
                   >
                     <span style={{ marginTop: 2, flexShrink: 0 }}>
-                      {p.status === 'pending' && <Square size={15} color="var(--t-text-muted)" />}
+                      {p.status === 'pending' && (
+                        <Square size={15} color="var(--t-border-default)" />
+                      )}
                       {p.status === 'running' && (
                         <CircleNotch
                           size={15}

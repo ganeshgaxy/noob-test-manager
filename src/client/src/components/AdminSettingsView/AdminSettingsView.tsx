@@ -12,6 +12,8 @@ import {
   Tag,
   Trash,
   Plus,
+  HardDrives,
+  PaintBrush,
 } from '@phosphor-icons/react'
 import { Input } from '@/components/ui/input.js'
 import { Label } from '@/components/ui/label.js'
@@ -23,6 +25,23 @@ import { useTheme, THEME_PRESETS } from '../../contexts/ThemeContext.js'
 import { api } from '../../lib/api.js'
 import type { AppTheme, GlobalTag } from '../../types/index.js'
 import { TagPill } from '../ui/tag-picker.js'
+import { useBranding } from '../../contexts/BrandingContext.js'
+import { SkeletonSidebarItem, SkeletonRows } from '../ui/skeleton.js'
+import { getAppsCacheSize, clearAppsCache } from '../../features/apps/hooks.js'
+import { getSpacesCacheSize, clearAllSpacesCache } from '../../features/spaces/hooks.js'
+import { getFoldersCacheSize, clearAllFoldersCache } from '../../features/folders/hooks.js'
+import {
+  getTestsCacheSize,
+  getTestDetailCacheSize,
+  clearAllTestsCache,
+  clearAllTestDetailsCache,
+} from '../../features/tests/hooks.js'
+import {
+  getRunsCacheSize,
+  clearAllRunsCache,
+  getRunResultsCacheSize,
+  clearAllRunResultsCache,
+} from '../../features/runs/hooks.js'
 
 // ─── Setting card ─────────────────────────────────────────────────────────────
 
@@ -181,6 +200,122 @@ export function AdminSettingsView() {
   // ── SSO config state ────────────────────────────────────────────────────────
   const [ssoConfigOpen, setSsoConfigOpen] = useState(false)
   const [currentSsoProvider, setCurrentSsoProvider] = useState<string>('none')
+
+  // ── Client cache state ──────────────────────────────────────────────────────
+  const [clientCacheOpen, setClientCacheOpen] = useState(false)
+
+  type CacheEntry = { label: string; description: string; size: number; clear: () => void }
+  const [cacheEntries, setCacheEntries] = useState<CacheEntry[]>([])
+
+  const buildCacheEntries = (): CacheEntry[] => [
+    {
+      label: 'Apps',
+      description: 'List of all applications',
+      size: getAppsCacheSize(),
+      clear: clearAppsCache,
+    },
+    {
+      label: 'Spaces',
+      description: 'Spaces per application',
+      size: getSpacesCacheSize(),
+      clear: clearAllSpacesCache,
+    },
+    {
+      label: 'Folders',
+      description: 'Folders per space',
+      size: getFoldersCacheSize(),
+      clear: clearAllFoldersCache,
+    },
+    {
+      label: 'Tests',
+      description: 'Test lists per folder',
+      size: getTestsCacheSize(),
+      clear: clearAllTestsCache,
+    },
+    {
+      label: 'Test Details',
+      description: 'Full test detail with steps',
+      size: getTestDetailCacheSize(),
+      clear: clearAllTestDetailsCache,
+    },
+    {
+      label: 'Runs',
+      description: 'Test runs per application',
+      size: getRunsCacheSize(),
+      clear: clearAllRunsCache,
+    },
+    {
+      label: 'Run Results',
+      description: 'Test results and report per run',
+      size: getRunResultsCacheSize(),
+      clear: clearAllRunResultsCache,
+    },
+  ]
+
+  const openClientCache = () => {
+    setCacheEntries(buildCacheEntries())
+    setClientCacheOpen(true)
+  }
+
+  const handleClearOne = (index: number) => {
+    cacheEntries[index].clear()
+    setCacheEntries(buildCacheEntries())
+  }
+
+  const handleClearAll = () => {
+    clearAppsCache()
+    clearAllSpacesCache()
+    clearAllFoldersCache()
+    clearAllTestsCache()
+    clearAllTestDetailsCache()
+    clearAllRunsCache()
+    clearAllRunResultsCache()
+    setCacheEntries(buildCacheEntries())
+  }
+
+  const totalClientCacheEntries = cacheEntries.reduce((s, e) => s + e.size, 0)
+
+  // ── Customisation state ─────────────────────────────────────────────────────
+  const { branding, setBranding, resetBranding } = useBranding()
+  const [customOpen, setCustomOpen] = useState(false)
+  const [draftTitle, setDraftTitle] = useState('')
+  const [draftIcon, setDraftIcon] = useState<string | null>(null)
+  const [customSaving, setCustomSaving] = useState(false)
+
+  const openCustom = () => {
+    setDraftTitle(branding.appTitle)
+    setDraftIcon(branding.iconData)
+    setCustomOpen(true)
+  }
+
+  const handleIconFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!['image/svg+xml', 'image/png'].includes(file.type)) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') setDraftIcon(reader.result)
+    }
+    reader.readAsDataURL(file)
+    // reset input so same file can be re-selected
+    e.target.value = ''
+  }
+
+  const handleCustomSave = async () => {
+    if (!draftTitle.trim()) return
+    setCustomSaving(true)
+    try {
+      await setBranding({ appTitle: draftTitle.trim(), iconData: draftIcon })
+      setCustomOpen(false)
+    } finally {
+      setCustomSaving(false)
+    }
+  }
+
+  const handleCustomReset = async () => {
+    await resetBranding()
+    setCustomOpen(false)
+  }
 
   // ── Global tags state ───────────────────────────────────────────────────────
   const [globalTagsOpen, setGlobalTagsOpen] = useState(false)
@@ -467,6 +602,13 @@ export function AdminSettingsView() {
             setThemeDialogOpen(true)
           }}
         />
+        <SettingCard
+          icon={<PaintBrush size={20} />}
+          title="Customisation"
+          description="Set the app title and icon shown on the login screen and in the header bar after login."
+          badge={branding.iconData ? `Icon + ${branding.appTitle}` : branding.appTitle}
+          onConfigure={openCustom}
+        />
         {isSuperAdmin && (
           <SettingCard
             icon={<Tag size={20} />}
@@ -476,6 +618,13 @@ export function AdminSettingsView() {
             onConfigure={openGlobalTags}
           />
         )}
+        <SettingCard
+          icon={<HardDrives size={20} />}
+          title="Client Cache"
+          description="In-browser SWR cache for apps, spaces, folders, tests and runs. Clear to force a fresh fetch."
+          badge={`${buildCacheEntries().reduce((s, e) => s + e.size, 0)} entries`}
+          onConfigure={openClientCache}
+        />
       </div>
 
       {/* ── Database modal ───────────────────────────────────────────────────── */}
@@ -1157,7 +1306,7 @@ export function AdminSettingsView() {
                 )}
                 <div style={{ overflowY: 'auto', flex: 1 }}>
                   {groupsLoading ? (
-                    <p style={{ padding: 16, fontSize: 13, color: '#555', margin: 0 }}>Loading…</p>
+                    Array.from({ length: 4 }).map((_, i) => <SkeletonSidebarItem key={i} i={i} />)
                   ) : groups.length === 0 ? (
                     <p style={{ padding: 16, fontSize: 13, color: '#555', margin: 0 }}>
                       No groups yet.
@@ -1349,9 +1498,7 @@ export function AdminSettingsView() {
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto' }}>
                       {groupMembersLoading ? (
-                        <p style={{ padding: 16, fontSize: 13, color: '#555', margin: 0 }}>
-                          Loading…
-                        </p>
+                        <SkeletonRows count={3} rowHeight={40} padding="8px 16px" iconSize={24} />
                       ) : groupMembers.length === 0 ? (
                         <p style={{ padding: 16, fontSize: 13, color: '#555', margin: 0 }}>
                           No members yet — search above to add.
@@ -1543,9 +1690,7 @@ export function AdminSettingsView() {
             {/* Tag list */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 24px 20px' }}>
               {globalTagsLoading ? (
-                <p style={{ fontSize: 13, color: 'var(--t-text-muted)', padding: '8px 0' }}>
-                  Loading…
-                </p>
+                <SkeletonRows count={4} rowHeight={40} padding="6px 0" showIcon={false} />
               ) : globalTagList.length === 0 ? (
                 <p style={{ fontSize: 13, color: 'var(--t-text-muted)', padding: '8px 0' }}>
                   No global tags yet. Add one above.
@@ -1606,6 +1751,464 @@ export function AdminSettingsView() {
               <Button variant="outline" onClick={() => setGlobalTagsOpen(false)}>
                 Close
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Client Cache modal ──────────────────────────────────────────────── */}
+      {clientCacheOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(2px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={() => setClientCacheOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--t-bg-panel)',
+              border: '1px solid var(--t-border-default)',
+              borderRadius: 12,
+              width: 480,
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '20px 24px 16px',
+                borderBottom: '1px solid var(--t-border-subtle)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: 'var(--t-bg-elevated)',
+                    border: '1px solid var(--t-border-default)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <HardDrives size={16} color="var(--t-text-secondary)" />
+                </div>
+                <div>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: 'var(--t-text-primary)',
+                    }}
+                  >
+                    Client Cache
+                  </p>
+                  <p style={{ margin: '1px 0 0', fontSize: 11, color: 'var(--t-text-muted)' }}>
+                    {totalClientCacheEntries} entr{totalClientCacheEntries !== 1 ? 'ies' : 'y'}{' '}
+                    cached in this browser session
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setClientCacheOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--t-text-muted)',
+                  display: 'flex',
+                  padding: 4,
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Cache list */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
+              <p
+                style={{
+                  margin: '0 0 12px',
+                  fontSize: 11,
+                  color: 'var(--t-text-muted)',
+                  lineHeight: 1.5,
+                }}
+              >
+                Each row shows how many keyed slices are currently cached for that resource.
+                Clearing a cache forces the next navigation to re-fetch from the server instead of
+                serving stale data.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {cacheEntries.map((entry, i) => (
+                  <div
+                    key={entry.label}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      borderRadius: 8,
+                      background: 'var(--t-bg-surface)',
+                      border: '1px solid var(--t-border-subtle)',
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: 'var(--t-text-primary)',
+                        }}
+                      >
+                        {entry.label}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--t-text-muted)', marginTop: 1 }}>
+                        {entry.description}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        flexShrink: 0,
+                        marginLeft: 12,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                          color: entry.size > 0 ? 'var(--t-text-secondary)' : 'var(--t-text-muted)',
+                          minWidth: 20,
+                          textAlign: 'right',
+                        }}
+                      >
+                        {entry.size}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={entry.size === 0}
+                        onClick={() => handleClearOne(i)}
+                        style={{ fontSize: 11, padding: '3px 10px', height: 'auto' }}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div
+              style={{
+                padding: '14px 24px',
+                borderTop: '1px solid var(--t-border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Button
+                variant="outline"
+                disabled={totalClientCacheEntries === 0}
+                onClick={handleClearAll}
+                style={{ gap: 6 }}
+              >
+                <Trash size={14} />
+                Clear All
+              </Button>
+              <Button variant="outline" onClick={() => setClientCacheOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Customisation modal ─────────────────────────────────────────────── */}
+      {customOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(2px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={() => setCustomOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--t-bg-panel)',
+              border: '1px solid var(--t-border-default)',
+              borderRadius: 12,
+              width: 460,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '20px 24px 16px',
+                borderBottom: '1px solid var(--t-border-subtle)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: 'var(--t-bg-elevated)',
+                    border: '1px solid var(--t-border-default)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <PaintBrush size={16} color="var(--t-text-secondary)" />
+                </div>
+                <div>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: 'var(--t-text-primary)',
+                    }}
+                  >
+                    Customisation
+                  </p>
+                  <p style={{ margin: '1px 0 0', fontSize: 11, color: 'var(--t-text-muted)' }}>
+                    App title &amp; icon
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCustomOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--t-text-muted)',
+                  display: 'flex',
+                  padding: 4,
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div
+              style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}
+            >
+              {/* Live preview */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '18px 16px',
+                  borderRadius: 10,
+                  background: 'var(--t-bg-surface)',
+                  border: '1px solid var(--t-border-subtle)',
+                }}
+              >
+                {draftIcon ? (
+                  <img
+                    src={draftIcon}
+                    alt="App icon preview"
+                    style={{ width: 48, height: 48, objectFit: 'contain', borderRadius: 10 }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 10,
+                      background: 'var(--t-bg-elevated)',
+                      border: '1px solid var(--t-border-default)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 22,
+                      fontWeight: 700,
+                      color: 'var(--t-text-secondary)',
+                    }}
+                  >
+                    {(draftTitle || 'N').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    color: 'var(--t-text-primary)',
+                  }}
+                >
+                  {draftTitle || 'noob-sdet'}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--t-text-muted)' }}>
+                  Login screen preview
+                </div>
+              </div>
+
+              {/* App title */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <Label style={{ fontSize: 12, color: 'var(--t-text-secondary)' }}>App Title</Label>
+                <Input
+                  value={draftTitle}
+                  onChange={(e) => setDraftTitle(e.target.value)}
+                  placeholder="noob-sdet"
+                  maxLength={40}
+                />
+              </div>
+
+              {/* Icon — file upload */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Label style={{ fontSize: 12, color: 'var(--t-text-secondary)' }}>App Icon</Label>
+                <p style={{ margin: 0, fontSize: 11, color: 'var(--t-text-muted)' }}>
+                  Upload an SVG or PNG (max ~512 KB). Shown on the login screen and in the top
+                  header bar after login. Recommended: square image, 64×64 px or larger (SVG scales
+                  perfectly at any size).
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '7px 14px',
+                      borderRadius: 7,
+                      border: '1px solid var(--t-border-default)',
+                      background: 'var(--t-bg-elevated)',
+                      color: 'var(--t-text-secondary)',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      transition: 'border-color 0.1s, color 0.1s',
+                    }}
+                    onMouseEnter={(e) => {
+                      ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--t-border-strong)'
+                      ;(e.currentTarget as HTMLElement).style.color = 'var(--t-text-primary)'
+                    }}
+                    onMouseLeave={(e) => {
+                      ;(e.currentTarget as HTMLElement).style.borderColor =
+                        'var(--t-border-default)'
+                      ;(e.currentTarget as HTMLElement).style.color = 'var(--t-text-secondary)'
+                    }}
+                  >
+                    <Plus size={13} />
+                    {draftIcon ? 'Replace icon' : 'Upload icon'}
+                    <input
+                      type="file"
+                      accept="image/svg+xml,image/png"
+                      style={{ display: 'none' }}
+                      onChange={handleIconFileChange}
+                    />
+                  </label>
+                  {draftIcon && (
+                    <button
+                      onClick={() => setDraftIcon(null)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '7px 12px',
+                        borderRadius: 7,
+                        border: '1px solid var(--t-border-default)',
+                        background: 'none',
+                        color: 'var(--t-accent-danger)',
+                        fontSize: 12,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <X size={12} />
+                      Remove icon
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 24px',
+                borderTop: '1px solid var(--t-border-subtle)',
+              }}
+            >
+              <button
+                onClick={handleCustomReset}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--t-text-muted)',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  padding: '6px 10px',
+                  borderRadius: 6,
+                  transition: 'color 0.1s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--t-text-secondary)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--t-text-muted)'
+                }}
+              >
+                <ArrowCounterClockwise size={14} />
+                Reset to default
+              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Button variant="outline" onClick={() => setCustomOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => void handleCustomSave()}
+                  disabled={customSaving || !draftTitle.trim()}
+                >
+                  {customSaving ? 'Saving…' : 'Save'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -1765,6 +2368,7 @@ export function AdminSettingsView() {
                       { key: 'bgSurface', label: 'Surface' },
                       { key: 'bgPanel', label: 'Panel' },
                       { key: 'bgElevated', label: 'Elevated' },
+                      { key: 'bgHover', label: 'Hover' },
                     ],
                   },
                   {
@@ -1789,6 +2393,7 @@ export function AdminSettingsView() {
                       { key: 'accentDanger', label: 'Danger' },
                       { key: 'accentSuccess', label: 'Success' },
                       { key: 'accentWarning', label: 'Warning' },
+                      { key: 'accentBlocked', label: 'Blocked' },
                     ],
                   },
                 ] as { label: string; fields: { key: keyof AppTheme; label: string }[] }[]

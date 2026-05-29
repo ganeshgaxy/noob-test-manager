@@ -1,7 +1,9 @@
 {
-  "cache": {
-    "type": "lru",
-    "lruMax": 500,
-    "ttl": 30
+  "appTitle": "TestMan",
+  "iconData": null,
+  "db": {
+    "type": "postgres",
+    "url": "postgresql://neondb_owner:npg_uOtIia78SkET@ep-lingering-bread-aqk2m9hy-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+    "poolMax": 10
   }
 }

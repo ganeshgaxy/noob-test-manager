@@ -3,6 +3,7 @@ import { readDbConfig, writeDbConfig, type DbConfig } from '../../db/config.js'
 import { initDb } from '../../db/client.js'
 import { createClient } from '@libsql/client'
 import pg from 'pg'
+import { requireAuth, requireSuperAdmin } from '../middleware/auth.js'
 
 const router = new Hono()
 
@@ -19,7 +20,8 @@ router.get('/', async (c) => {
 })
 
 /** POST /api/db-config/test — test a connection without saving it */
-router.post('/test', async (c) => {
+router.post('/test', requireAuth, async (c) => {
+  requireSuperAdmin(c)
   const body = (await c.req.json()) as Partial<DbConfig>
   const { type, url, token } = body
 
@@ -49,7 +51,8 @@ router.post('/test', async (c) => {
 })
 
 /** PUT /api/db-config — save and apply new connection */
-router.put('/', async (c) => {
+router.put('/', requireAuth, async (c) => {
+  requireSuperAdmin(c)
   const body = (await c.req.json()) as Partial<DbConfig>
   const { type, url, token, poolMax } = body
 

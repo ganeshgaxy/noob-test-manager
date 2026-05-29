@@ -427,6 +427,8 @@ export interface AppTheme {
   accentSuccess: string
   /** Warning / caution  e.g. #b45309 */
   accentWarning: string
+  /** Blocked / on-hold status  e.g. #f97316 */
+  accentBlocked: string
 
   // ── Typography ─────────────────────────────────────────────────────────────
   fontSans: string

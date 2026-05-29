@@ -25,10 +25,11 @@ import { Button } from '@/components/ui/button.js'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog.js'
 import { RowMenu } from '@/components/ui/row-menu.js'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import type { TestDetail, View } from '../../types/index.js'
+import type { View } from '../../types/index.js'
 import { api } from '../../lib/api.js'
 import { useClipboard } from '../../contexts/ClipboardContext.js'
-import { useTests } from '../../features/tests/hooks.js'
+import { useTests, useTestDetail } from '../../features/tests/hooks.js'
+import { SkeletonRows } from '@/components/ui/skeleton.js'
 
 interface Props {
   appId: number
@@ -156,16 +157,7 @@ function DetailPanel({
   onClose: () => void
   onEdit: () => void
 }) {
-  const [detail, setDetail] = useState<TestDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    setLoading(true)
-    api.tests
-      .get(folderId, testId)
-      .then(setDetail)
-      .finally(() => setLoading(false))
-  }, [folderId, testId])
+  const { test: detail, loading } = useTestDetail(folderId, testId)
 
   return (
     <div
@@ -283,18 +275,7 @@ function DetailPanel({
       {/* Body */}
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         {loading ? (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              color: 'var(--t-text-muted)',
-              fontSize: 13,
-            }}
-          >
-            Loading…
-          </div>
+          <SkeletonRows count={6} rowHeight={52} padding="12px 16px" showIcon={false} />
         ) : !detail ? (
           <div
             style={{
@@ -1891,17 +1872,7 @@ export function SpaceView({
         {/* List */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {testsLoading ? (
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                padding: '64px 0',
-                color: 'var(--t-text-muted)',
-                fontSize: 13,
-              }}
-            >
-              Loading…
-            </div>
+            <SkeletonRows count={8} rowHeight={48} padding="10px 16px" showIcon={false} />
           ) : tests.length === 0 ? (
             <div
               style={{

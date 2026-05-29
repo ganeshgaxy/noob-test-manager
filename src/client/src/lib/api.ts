@@ -653,6 +653,22 @@ export const api = {
       }),
   },
 
+  // ─── Branding ─────────────────────────────────────────────────────────────
+
+  branding: {
+    get: () => req<{ appTitle: string; iconData: string | null }>(`${BASE}/branding`),
+    update: (data: { appTitle?: string; iconData?: string | null }) =>
+      req<{ appTitle: string; iconData: string | null }>(`${BASE}/branding`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    reset: () =>
+      req<{ appTitle: string; iconData: string | null }>(`${BASE}/branding/reset`, {
+        method: 'POST',
+        body: '{}',
+      }),
+  },
+
   // ─── Theme ────────────────────────────────────────────────────────────────
 
   theme: {

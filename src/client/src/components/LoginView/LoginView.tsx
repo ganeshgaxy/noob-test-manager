@@ -3,6 +3,7 @@ import { Button } from '../ui/button.js'
 import { Input } from '../ui/input.js'
 import { Label } from '../ui/label.js'
 import { useAuth } from '../../contexts/AuthContext.js'
+import { useBranding } from '../../contexts/BrandingContext.js'
 import { api } from '../../lib/api.js'
 
 // ─── Shared card shell ────────────────────────────────────────────────────────
@@ -16,6 +17,7 @@ export function AuthCard({
   subtitle?: string
   children: React.ReactNode
 }) {
+  const { branding } = useBranding()
   return (
     <div
       style={{
@@ -37,16 +39,49 @@ export function AuthCard({
       >
         {/* Logo / wordmark */}
         <div style={{ marginBottom: 28, textAlign: 'center' }}>
-          <span
+          {branding.iconData ? (
+            <img
+              src={branding.iconData}
+              alt={branding.appTitle}
+              style={{
+                width: 48,
+                height: 48,
+                objectFit: 'contain',
+                marginBottom: 10,
+                borderRadius: 10,
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 10,
+                background: 'var(--t-bg-elevated)',
+                border: '1px solid var(--t-border-default)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 22,
+                fontWeight: 700,
+                color: 'var(--t-text-secondary)',
+                margin: '0 auto 10px',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {branding.appTitle.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div
             style={{
-              fontSize: 20,
+              fontSize: 17,
               fontWeight: 700,
-              letterSpacing: '-0.03em',
+              letterSpacing: '-0.02em',
               color: 'var(--t-text-primary)',
             }}
           >
-            noob<span style={{ color: 'var(--t-text-secondary)' }}>-sdet</span>
-          </span>
+            {branding.appTitle}
+          </div>
         </div>
 
         <h1

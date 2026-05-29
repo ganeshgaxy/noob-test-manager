@@ -13,10 +13,12 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog.js'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog.js'
+import { Skeleton } from '@/components/ui/skeleton.js'
 import type { App, View, UpdateAppPayload } from '../../types/index.js'
 
 interface Props {
   apps: App[]
+  loading?: boolean
   onNavigate: (v: View) => void
   onAdd: (data: { name: string; description?: string }) => Promise<App | undefined>
   onRename: (id: number, data: UpdateAppPayload) => Promise<App>
@@ -104,7 +106,7 @@ function NewAppDialog({
   )
 }
 
-export function AppsView({ apps, onNavigate, onAdd, onRename, onDelete }: Props) {
+export function AppsView({ apps, loading, onNavigate, onAdd, onRename, onDelete }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [confirm, setConfirm] = useState<{ id: number; name: string } | null>(null)
   const [renameTarget, setRenameTarget] = useState<{
@@ -170,8 +172,37 @@ export function AppsView({ apps, onNavigate, onAdd, onRename, onDelete }: Props)
           </Button>
         </div>
 
-        {/* Empty state */}
-        {apps.length === 0 ? (
+        {/* Skeleton */}
+        {loading ? (
+          <div
+            style={{
+              border: '1px solid var(--t-border-subtle)',
+              borderRadius: 10,
+              overflow: 'hidden',
+              background: 'var(--t-bg-surface)',
+            }}
+          >
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: '14px 18px',
+                  borderTop: i > 0 ? '1px solid var(--t-border-subtle)' : 'none',
+                }}
+              >
+                <Skeleton width={36} height={36} borderRadius={10} />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <Skeleton height={13} width={`${35 + ((i * 20) % 30)}%`} borderRadius={3} />
+                  <Skeleton height={10} width={`${20 + ((i * 13) % 25)}%`} borderRadius={3} />
+                </div>
+                <Skeleton width={16} height={16} borderRadius={3} />
+              </div>
+            ))}
+          </div>
+        ) : apps.length === 0 ? (
           <div
             style={{
               display: 'flex',

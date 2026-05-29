@@ -9,6 +9,7 @@ import {
 } from '@phosphor-icons/react'
 import { api } from '../../lib/api.js'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog.js'
+import { SkeletonRows } from '@/components/ui/skeleton.js'
 import type { Folder, Test } from '../../types/index.js'
 
 // ─── Tree types ───────────────────────────────────────────────────────────────
@@ -300,7 +301,7 @@ export function TrashView({ spaceId }: { spaceId: number }) {
 
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
-        {loading && <p style={{ fontSize: 12, color: 'var(--t-text-muted)' }}>Loading…</p>}
+        {loading && <SkeletonRows count={5} rowHeight={46} padding="10px 0" />}
 
         {!loading && isEmpty && (
           <div

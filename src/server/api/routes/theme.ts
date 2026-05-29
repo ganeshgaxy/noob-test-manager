@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { readFile, writeFile } from 'fs/promises'
 import { resolve } from 'path'
-import { requireAuth } from '../middleware/auth.js'
+import { requireAuth, requireSuperAdmin } from '../middleware/auth.js'
 
 const THEME_PATH = resolve(process.cwd(), 'noob-sdet.theme.json')
 
@@ -66,8 +66,9 @@ themeRouter.get('/', async (c) => {
   return c.json(theme)
 })
 
-// PUT /api/theme — saves theme (requires auth)
+// PUT /api/theme — saves theme (super_admin only — affects all users)
 themeRouter.put('/', requireAuth, async (c) => {
+  requireSuperAdmin(c)
   const body = await c.req.json<Partial<ThemeTokens>>()
   const current = await readTheme()
   const merged: ThemeTokens = { ...current, ...body }
@@ -75,8 +76,9 @@ themeRouter.put('/', requireAuth, async (c) => {
   return c.json(merged)
 })
 
-// POST /api/theme/reset — resets to default dark theme
+// POST /api/theme/reset — resets to default dark theme (super_admin only)
 themeRouter.post('/reset', requireAuth, async (c) => {
+  requireSuperAdmin(c)
   await writeTheme({ ...DARK_THEME })
   return c.json({ ...DARK_THEME })
 })

@@ -29,8 +29,16 @@ export async function initDb(config?: DbConfig): Promise<void> {
       pgPool = null
     }
 
+    // pg-connection-string warns when sslmode is 'prefer', 'require', or 'verify-ca'
+    // because it already treats them as 'verify-full'. Normalise to 'verify-full'
+    // explicitly so the warning is suppressed without changing the effective behaviour.
+    const pgUrl = resolvedConfig.url.replace(
+      /\bsslmode=(prefer|require|verify-ca)\b/gi,
+      'sslmode=verify-full'
+    )
+
     pgPool = new pg.Pool({
-      connectionString: resolvedConfig.url,
+      connectionString: pgUrl,
       max: resolvedConfig.poolMax ?? 10,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000,

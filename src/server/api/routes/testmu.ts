@@ -151,6 +151,8 @@ function flattenFolderTree(nodes: TmFolder[], resolvedParentId: string | null = 
 
 const TM_PAGE_SIZE = 250 // max results per page when paginating
 
+const TM_REQUEST_TIMEOUT_MS = 30_000 // 30 s — prevents a stalled request from hanging the pool
+
 /** Direct server → TestMu HTTP fetch with retry + backoff for 429/5xx. */
 async function tmGet<T>(
   encoded: string,
@@ -163,9 +165,25 @@ async function tmGet<T>(
   if (params && Object.keys(params).length > 0) {
     url += '?' + new URLSearchParams(params).toString()
   }
-  const res = await fetch(url, {
-    headers: { Authorization: `Basic ${encoded}`, Accept: 'application/json' },
-  })
+
+  const abort = new AbortController()
+  const timer = setTimeout(() => abort.abort(), TM_REQUEST_TIMEOUT_MS)
+
+  let res: Response
+  try {
+    res = await fetch(url, {
+      headers: { Authorization: `Basic ${encoded}`, Accept: 'application/json' },
+      signal: abort.signal,
+    })
+  } catch (err) {
+    clearTimeout(timer)
+    // Re-throw AbortError as a friendlier timeout message
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`TestMu request timed out: ${endpoint}`, { cause: err })
+    }
+    throw err
+  }
+  clearTimeout(timer)
 
   // Retry on rate-limit or server errors (up to 4 attempts: 0, 1s, 2s, 4s)
   if ((res.status === 429 || res.status >= 500) && attempt < 4) {
@@ -393,8 +411,15 @@ async function dbCreateScenario(
 
 // ─── Core import logic ────────────────────────────────────────────────────────
 
-const PROJECT_CONCURRENCY = 3
-const TEST_CONCURRENCY = 8 // flat pool — kept conservative to avoid TM rate limits
+// Projects are imported one at a time. Parallel projects would multiply the HTTP
+// request and SQLite write load by PROJECT_CONCURRENCY — causing rate-limit storms
+// on the TestMu API and SQLite "database is locked" errors under the concurrent writes.
+const PROJECT_CONCURRENCY = 1
+// Per-project test-detail concurrency — conservative to stay well under TM rate limits.
+const TEST_CONCURRENCY = 5
+// Per-project concurrency for Phase A (folder → test-ID list fetching).
+// Raw Promise.all over all folders fires 400+ simultaneous requests; throttle to this.
+const FOLDER_FETCH_CONCURRENCY = 10
 
 async function importAllProjects(
   projects: Array<{ project_id: number | string; name: string; description?: string }>,
@@ -510,22 +535,22 @@ async function importAllProjects(
           /* best effort */
         }
       } else {
-        await Promise.all(
-          realFolderEntries.map(async ([tmFolderIdStr, ourFolderId]) => {
-            try {
-              const list = await tmGetAllPages(
-                encoded,
-                baseUrl,
-                `/projects/${projectId}/folder/${tmFolderIdStr}/test-cases`
-              )
-              for (const tc of list) {
-                const tcId = String(tc.test_case_id ?? tc.id ?? '')
-                if (tcId) allTests.push({ tcId, ourFolderId })
-              }
-            } catch {
-              /* skip this folder */
+        // Throttle folder list fetching — raw Promise.all over hundreds of folders fires
+        // too many simultaneous requests and trips TestMu rate limits
+        await serverPool(
+          realFolderEntries,
+          FOLDER_FETCH_CONCURRENCY,
+          async ([tmFolderIdStr, ourFolderId]) => {
+            const list = await tmGetAllPages(
+              encoded,
+              baseUrl,
+              `/projects/${projectId}/folder/${tmFolderIdStr}/test-cases`
+            )
+            for (const tc of list) {
+              const tcId = String(tc.test_case_id ?? tc.id ?? '')
+              if (tcId) allTests.push({ tcId, ourFolderId })
             }
-          })
+          }
         )
       }
 

@@ -21,6 +21,7 @@ export const THEME_PRESETS: AppTheme[] = [
     accentDanger: '#e5484d',
     accentSuccess: '#1a9e5e',
     accentWarning: '#b45309',
+    accentBlocked: '#f97316',
     fontSans: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif',
     fontMono: 'ui-monospace, SFMono-Regular, "Cascadia Code", monospace',
     radius: 8,
@@ -41,6 +42,7 @@ export const THEME_PRESETS: AppTheme[] = [
     accentDanger: '#e5484d',
     accentSuccess: '#1a9e5e',
     accentWarning: '#b45309',
+    accentBlocked: '#f97316',
     fontSans: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif',
     fontMono: 'ui-monospace, SFMono-Regular, "Cascadia Code", monospace',
     radius: 8,
@@ -61,6 +63,7 @@ export const THEME_PRESETS: AppTheme[] = [
     accentDanger: '#dc2626',
     accentSuccess: '#16a34a',
     accentWarning: '#d97706',
+    accentBlocked: '#ea580c',
     fontSans: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif',
     fontMono: 'ui-monospace, SFMono-Regular, "Cascadia Code", monospace',
     radius: 8,
@@ -81,6 +84,7 @@ export const THEME_PRESETS: AppTheme[] = [
     accentDanger: '#ef4444',
     accentSuccess: '#22c55e',
     accentWarning: '#f59e0b',
+    accentBlocked: '#f97316',
     fontSans: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif',
     fontMono: 'ui-monospace, SFMono-Regular, "Cascadia Code", monospace',
     radius: 6,
@@ -129,7 +133,7 @@ function applyTheme(t: AppTheme) {
   // Overlay backdrop
   root.style.setProperty('--t-overlay', isLight ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.6)')
   // Status accent colours
-  root.style.setProperty('--t-accent-blocked', '#f97316')
+  root.style.setProperty('--t-accent-blocked', t.accentBlocked)
   root.style.setProperty('--t-border-subtle', t.borderSubtle)
   root.style.setProperty('--t-border-default', t.borderDefault)
   root.style.setProperty('--t-border-strong', t.borderStrong)

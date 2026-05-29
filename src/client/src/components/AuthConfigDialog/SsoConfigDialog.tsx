@@ -22,7 +22,7 @@ function SH({ label }: { label: string }) {
       style={{
         fontSize: 10,
         fontWeight: 700,
-        color: '#444',
+        color: 'var(--t-text-muted)',
         textTransform: 'uppercase',
         letterSpacing: '0.08em',
         marginBottom: 8,
@@ -44,9 +44,9 @@ function Field({
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <Label style={{ fontSize: 12, color: '#888' }}>
+      <Label style={{ fontSize: 12, color: 'var(--t-text-secondary)' }}>
         {label}
-        {required && <span style={{ color: '#e5484d', marginLeft: 2 }}>*</span>}
+        {required && <span style={{ color: 'var(--t-accent-danger)', marginLeft: 2 }}>*</span>}
       </Label>
       {children}
     </div>
@@ -70,9 +70,9 @@ function ProviderCard({
         flex: 1,
         padding: '8px 0',
         borderRadius: 8,
-        border: `1px solid ${active ? '#555' : '#2a2a2a'}`,
-        background: active ? 'rgba(255,255,255,0.06)' : '#0d0d0d',
-        color: active ? '#ededed' : '#666',
+        border: `1px solid ${active ? 'var(--t-border-strong)' : 'var(--t-border-default)'}`,
+        background: active ? 'var(--t-bg-surface)' : 'var(--t-bg-elevated)',
+        color: active ? 'var(--t-text-primary)' : 'var(--t-text-secondary)',
         fontSize: 12,
         fontWeight: active ? 600 : 400,
         cursor: 'pointer',
@@ -189,8 +189,8 @@ export function SsoConfigDialog({ open, onClose, onSaved }: Props) {
             width: 500,
             maxHeight: '90vh',
             overflowY: 'auto',
-            background: '#111',
-            border: '1px solid #222',
+            background: 'var(--t-bg-panel)',
+            border: '1px solid var(--t-border-default)',
             borderRadius: 12,
             padding: 24,
             boxShadow: '0 24px 60px rgba(0,0,0,0.8)',
@@ -211,20 +211,27 @@ export function SsoConfigDialog({ open, onClose, onSaved }: Props) {
                   width: 32,
                   height: 32,
                   borderRadius: 8,
-                  background: '#1a1a1a',
-                  border: '1px solid #2a2a2a',
+                  background: 'var(--t-bg-elevated)',
+                  border: '1px solid var(--t-border-default)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <ShieldCheck size={16} weight="fill" color="#888" />
+                <ShieldCheck size={16} weight="fill" color="var(--t-text-secondary)" />
               </div>
               <div>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#ededed' }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: 'var(--t-text-primary)',
+                  }}
+                >
                   Single Sign-On (SSO)
                 </p>
-                <p style={{ margin: '1px 0 0', fontSize: 11, color: '#555' }}>
+                <p style={{ margin: '1px 0 0', fontSize: 11, color: 'var(--t-text-muted)' }}>
                   OIDC &amp; GitHub OAuth configuration
                 </p>
               </div>
@@ -235,8 +242,9 @@ export function SsoConfigDialog({ open, onClose, onSaved }: Props) {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  color: '#555',
+                  color: 'var(--t-text-muted)',
                   display: 'flex',
+                  padding: 4,
                 }}
               >
                 <X size={16} />
@@ -245,7 +253,14 @@ export function SsoConfigDialog({ open, onClose, onSaved }: Props) {
           </div>
 
           {loading ? (
-            <p style={{ textAlign: 'center', color: '#444', fontSize: 13, padding: '32px 0' }}>
+            <p
+              style={{
+                textAlign: 'center',
+                color: 'var(--t-text-muted)',
+                fontSize: 13,
+                padding: '32px 0',
+              }}
+            >
               Loading…
             </p>
           ) : (
@@ -270,7 +285,7 @@ export function SsoConfigDialog({ open, onClose, onSaved }: Props) {
                   />
                 </div>
                 {ssoProvider === 'none' && (
-                  <p style={{ fontSize: 12, color: '#555', lineHeight: 1.6 }}>
+                  <p style={{ fontSize: 12, color: 'var(--t-text-muted)', lineHeight: 1.6 }}>
                     SSO is disabled. Users sign in with email and password. Enable OIDC for Google,
                     Okta, Azure AD, Keycloak, etc., or GitHub for GitHub OAuth.
                   </p>
@@ -302,20 +317,24 @@ export function SsoConfigDialog({ open, onClose, onSaved }: Props) {
                           onChange={(e) => setSsoDiscoveryUrl(e.target.value)}
                           required
                         />
-                        <p style={{ fontSize: 11, color: '#555', margin: '4px 0 0' }}>
+                        <p
+                          style={{ fontSize: 11, color: 'var(--t-text-muted)', margin: '4px 0 0' }}
+                        >
                           The issuer URL — discovery doc is fetched from{' '}
-                          <code style={{ color: '#888' }}>
+                          <code style={{ color: 'var(--t-text-secondary)' }}>
                             {'{issuer}'}/.well-known/openid-configuration
                           </code>
                         </p>
                       </Field>
                     )}
                     {ssoProvider === 'github' && (
-                      <p style={{ fontSize: 12, color: '#555', lineHeight: 1.6 }}>
+                      <p style={{ fontSize: 12, color: 'var(--t-text-muted)', lineHeight: 1.6 }}>
                         Create an OAuth App at{' '}
-                        <strong>github.com → Settings → Developer settings → OAuth Apps</strong>.
-                        Set the callback URL to{' '}
-                        <code style={{ color: '#888', fontSize: 11 }}>
+                        <strong style={{ color: 'var(--t-text-secondary)' }}>
+                          github.com → Settings → Developer settings → OAuth Apps
+                        </strong>
+                        . Set the callback URL to{' '}
+                        <code style={{ color: 'var(--t-text-secondary)', fontSize: 11 }}>
                           {window.location.origin}/api/auth/sso/callback
                         </code>
                       </p>
@@ -326,11 +345,15 @@ export function SsoConfigDialog({ open, onClose, onSaved }: Props) {
                         id="ssoAutoProvision"
                         checked={ssoAutoProvision}
                         onChange={(e) => setSsoAutoProvision(e.target.checked)}
-                        style={{ accentColor: '#888', width: 14, height: 14 }}
+                        style={{ accentColor: 'var(--t-text-secondary)', width: 14, height: 14 }}
                       />
                       <label
                         htmlFor="ssoAutoProvision"
-                        style={{ fontSize: 12, color: '#888', cursor: 'pointer' }}
+                        style={{
+                          fontSize: 12,
+                          color: 'var(--t-text-secondary)',
+                          cursor: 'pointer',
+                        }}
                       >
                         Auto-create user account on first SSO sign-in
                       </label>
@@ -347,19 +370,19 @@ export function SsoConfigDialog({ open, onClose, onSaved }: Props) {
                     gap: 8,
                     padding: '10px 14px',
                     borderRadius: 8,
-                    background: status.ok ? 'rgba(61,214,140,0.08)' : 'rgba(229,72,77,0.08)',
-                    border: `1px solid ${status.ok ? 'rgba(61,214,140,0.25)' : 'rgba(229,72,77,0.25)'}`,
+                    background: status.ok ? 'rgba(34,197,94,0.08)' : 'rgba(229,72,77,0.08)',
+                    border: `1px solid ${status.ok ? 'rgba(34,197,94,0.2)' : 'rgba(229,72,77,0.2)'}`,
                     marginBottom: 16,
+                    fontSize: 13,
+                    color: status.ok ? 'var(--t-accent-success)' : 'var(--t-accent-danger)',
                   }}
                 >
                   {status.ok ? (
-                    <CheckCircle size={15} weight="fill" color="#3dd68c" />
+                    <CheckCircle size={15} weight="fill" />
                   ) : (
-                    <Warning size={15} weight="fill" color="#e5484d" />
+                    <Warning size={15} weight="fill" />
                   )}
-                  <span style={{ fontSize: 13, color: status.ok ? '#3dd68c' : '#e5484d' }}>
-                    {status.message}
-                  </span>
+                  {status.message}
                 </div>
               )}
 

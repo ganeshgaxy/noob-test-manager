@@ -14,6 +14,7 @@ import { api } from '../../lib/api.js'
 import type { AuthUser } from '../../types/index.js'
 import { UserDialog } from './UserDialog.js'
 import { ResetPasswordDialog } from './ResetPasswordDialog.js'
+import { SkeletonRows } from '../ui/skeleton.js'
 
 // ─── Row ──────────────────────────────────────────────────────────────────────
 
@@ -270,13 +271,7 @@ export function UsersView() {
 
       {/* Table */}
       <div style={{ flex: 1, overflow: 'auto' }}>
-        {loading && (
-          <div
-            style={{ padding: 32, textAlign: 'center', color: 'var(--t-text-muted)', fontSize: 13 }}
-          >
-            Loading…
-          </div>
-        )}
+        {loading && <SkeletonRows count={6} rowHeight={52} padding="12px 16px" />}
         {error && (
           <div
             style={{
