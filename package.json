@@ -2,6 +2,24 @@
   "name": "@ganeshgaxy/noob-test-manager",
   "version": "0.1.4",
   "description": "A dev tool for SDETs to manage and test web applications",
+  "keywords": [
+    "sdet",
+    "test-management",
+    "qa",
+    "testing",
+    "test-runner",
+    "cli"
+  ],
+  "license": "MIT",
+  "author": "ganeshgaxy",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ganeshgaxy/noob-test-manager.git"
+  },
+  "homepage": "https://github.com/ganeshgaxy/noob-test-manager#readme",
+  "bugs": {
+    "url": "https://github.com/ganeshgaxy/noob-test-manager/issues"
+  },
   "type": "module",
   "bin": {
     "noob-sdet": "dist/cli.js"
